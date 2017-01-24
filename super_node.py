@@ -40,10 +40,10 @@ class SNode(object):
                 raise Exception("wrong mapper, too many .x")
             else:
                 #pdb.set_trace()
-                if input_list[0][0] == "[" and type(eval(input_list[0])) is list: # the first broadcasting was already done
+                if re.search('\[([a-zA-Z,\'\s])+\]', input_list[0]): # the first broadcasting was already done
                     input_list =  self._broadcasting_list_of_input_dot(input_list, 0)
 
-                elif input_list[1][0] == "[" and type(eval(input_list[1])) is list:
+                elif re.search('\[([a-zA-Z,\'\s])+\]', input_list[1]):
                     input_list =  self._broadcasting_list_of_input_dot(input_list, 1)
 
                 else:
@@ -59,10 +59,10 @@ class SNode(object):
             if len(input_list) != 2 or "." in input_list:
                 raise Exception("wrong mapper, too many .x")
             else:
-                if input_list[0][0] == "[" and type(eval(input_list[0])) is list:
-                    input_list = self._broadcasting_list_of_input_cross(input_list, 0)
-                elif input_list[1][0] == "[" and type(eval(input_list[1])) is list:
-                    input_list = self._broadcasting_list_of_input_cross(input_list, 1)
+                if re.search('\[([a-zA-Z,\'\s])+\]', input_list[0]):
+                    input_list = self._broadcasting_list_of_input_outer(input_list, 0)
+                elif re.search('\[([a-zA-Z,\'\s])+\]', input_list[1]):
+                    input_list = self._broadcasting_list_of_input_outer(input_list, 1)
                 else: #dac spr czy 1d
                     self.inputs[input_list[0]], self.inputs[input_list[1]] = \
                         np.broadcast_arrays(self.inputs_usr[input_list[0]], \
@@ -91,13 +91,13 @@ class SNode(object):
         return [inp for inp in eval(input_list[ind_list])] + [input_list[ind_no_list]]
 
 
-    def _broadcasting_list_of_input_cross(self, input_list, ind_list):
+    def _broadcasting_list_of_input_outer(self, input_list, ind_list):
         ind_no_list = [i for i in [0,1] if i != ind_list][0]
 
         broadcasted_array = self.inputs[eval(input_list[ind_list])[0]]
         new_array = np.array(self.inputs_usr[input_list[ind_no_list]])
         if broadcasted_array.ndim > 1 or new_array.ndim > 1:
-            raise Exception("cross product requires ndim=1")
+            raise Exception("outer product requires ndim=1")
         
         if ind_list == 0:
             for key in eval(input_list[ind_list]):

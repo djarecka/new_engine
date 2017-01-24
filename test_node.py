@@ -63,6 +63,17 @@ def test_single_node_5(inputs_dic, expected_output):
     assert (sn.output == expected_output).all()
 
 
+@pytest.mark.xfail
+@pytest.mark.parametrize("inputs_dic, expected_output", [
+        ({"a":[3, 1], "b":[1, 2], "c":[0, 1]}, [3, 1]),
+        ])
+def test_single_node_5a(inputs_dic, expected_output):
+    sn = SNode(function=my_function_3, mapper='(a.(b.c))', inputs=inputs_dic)
+    sn.run()
+    pdb.set_trace()
+    assert (sn.output == expected_output).all()
+
+
 @pytest.mark.parametrize("inputs_dic, expected_output", [
         ({"a":[3, 1], "b":[1, 2], "c": [[1,0],[1,2]]}, np.array([[2, 1], [5, 0]])),
         ])
@@ -91,6 +102,7 @@ def test_single_node_8(inputs_dic, expected_output):
     sn.run()
     pdb.set_trace()
     assert (sn.output == expected_output).all()
+
 
 @pytest.mark.xfail
 @pytest.mark.parametrize("inputs_dic, expected_output", [
