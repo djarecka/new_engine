@@ -11,112 +11,106 @@ class SNode(object):
             self.mapper = mapper
         else: 
             raise Exception("wrong mapper")
+        # property? TODO
         self.inputs_usr = inputs
         self.inputs = {}
-        #pdb.set_trace()
-        self._mapper_to_inputs(inputs, mapper)
-
-
-    def _mapper_to_inputs(self, inputs_dic, mapper):
-        inner_brackets = True
-        while inner_brackets:
-            bracket_search = re.search('\([^\(\)]+\)', mapper)
-            if bracket_search:
-                expr_bracket = mapper[bracket_search.start() : bracket_search.end()]
-                broadcasted_list = self._broadcasting_input(expr_bracket[1:-1])
-                mapper = mapper.replace(expr_bracket, str(broadcasted_list))
-            else:
-                inner_brackets = False
-                broadcasted_list = self._broadcasting_input(mapper)
-        #pdb.set_trace()
-        if not all(key in self.inputs for key in broadcasted_list):
-            raise Exception("incomplite input")
-
-    def _broadcasting_input(self, expr):
-        if "." in expr:
-            input_list = expr.split(".")
-            # checking if list has exactly 2 elements and no special signs
-            if len(input_list) != 2 or "x" in input_list:
-                raise Exception("wrong mapper, too many .x")
-            else:
-                #pdb.set_trace()
-                if re.search('\[([a-zA-Z,\'\s])+\]', input_list[0]): # the first broadcasting was already done
-                    input_list =  self._broadcasting_list_of_input_dot(input_list, 0)
-
-                elif re.search('\[([a-zA-Z,\'\s])+\]', input_list[1]):
-                    input_list =  self._broadcasting_list_of_input_dot(input_list, 1)
-
-                else:
-                    self.inputs[input_list[0]], self.inputs[input_list[1]] = \
-                        np.broadcast_arrays(self.inputs_usr[input_list[0]], 
-                                            self.inputs_usr[input_list[1]])
-                #pdb.set_trace()
-                return input_list  # pomyslec czy potrzebne
-
-        elif "x" in expr:
-            input_list = expr.split("x")
-            # checking if list has exactly 2 elements and no special signs  
-            if len(input_list) != 2 or "." in input_list:
-                raise Exception("wrong mapper, too many .x")
-            else:
-                if re.search('\[([a-zA-Z,\'\s])+\]', input_list[0]):
-                    input_list = self._broadcasting_list_of_input_outer(input_list, 0)
-                elif re.search('\[([a-zA-Z,\'\s])+\]', input_list[1]):
-                    input_list = self._broadcasting_list_of_input_outer(input_list, 1)
-                else: #dac spr czy 1d
-                    self.inputs[input_list[0]], self.inputs[input_list[1]] = \
-                        np.broadcast_arrays(self.inputs_usr[input_list[0]], \
-                        np.array(self.inputs_usr[input_list[1]])[np.newaxis].transpose())
-                return input_list  # pomyslec czy potrzebne 
-        else:
-            self.inputs[expr] = np.array(self.inputs_usr[expr])
-            return [expr]  # pomyslec czy potrzebne 
-
-
-    def _broadcasting_list_of_input_dot(self, input_list, ind_list):
-        ind_no_list = [i for i in [0,1] if i != ind_list][0]
-        broadcasted_array = self.inputs[eval(input_list[ind_list])[0]]
-        new_array = np.array(self.inputs_usr[input_list[ind_no_list]])
-        if broadcasted_array.shape == new_array.shape:
-            self.inputs[input_list[ind_no_list]] = new_array
-        elif new_array.shape == (1,):
-            self.inputs[input_list[ind_no_list]] = np.brodcast_to(new_array, broadcasted_array.shape)
-        elif broadcasted_array.shape == (1,):
-            self.inputs[input_list[ind_no_list]] = new_array
-            for key in eval(input_list[ind_list]):
-                self.inputs[key] = np.brodcast_to(self.inputs[key], new_array.shape)
-        else:
-            raise Exception("wrong mapper: can't broadcast")
-
-        return [inp for inp in eval(input_list[ind_list])] + [input_list[ind_no_list]]
-
-
-    def _broadcasting_list_of_input_outer(self, input_list, ind_list):
-        ind_no_list = [i for i in [0,1] if i != ind_list][0]
-
-        broadcasted_array = self.inputs[eval(input_list[ind_list])[0]]
-        new_array = np.array(self.inputs_usr[input_list[ind_no_list]])
-        if broadcasted_array.ndim > 1 or new_array.ndim > 1:
-            raise Exception("outer product requires ndim=1")
+        for key in inputs:
+            self.inputs[key] = np.array(inputs[key])
         
-        if ind_list == 0:
-            for key in eval(input_list[ind_list]):
-                self.inputs[key], self.inputs[input_list[ind_no_list]] = \
-                    np.broadcast_arrays(self.inputs[key], \
-                                            new_array[np.newaxis].transpose())
-        elif ind_list == 1:
-            for key in eval(input_list[ind_list]):
-                self.inputs[input_list[ind_no_list]], self.inputs[key] = \
-                    np.broadcast_arrays(new_array, \
-                                            self.inputs[key][np.newaxis].transpose())
-
         #pdb.set_trace()
-        return [inp for inp in eval(input_list[ind_list])] + [input_list[ind_no_list]]
+        self._mapper_to_inputs()
+
+
+    def _mapper_to_inputs(self):
+        self._rpn()
+        if len(self._mapper_rpn) > 1:
+            self._input_broadcasting()
+
+
+    def _rpn(self):
+        self._mapper_rpn = []
+        signs = []
+        i=0
+        while i < len(self.mapper):    
+            l = self.mapper[i]
+            inc=1
+            if l in ["(", ".", "x"]:
+                signs.append(l)
+            elif l == ")":
+                self._mapper_rpn.append(signs.pop())
+                if signs[-1] == "(":
+                    signs.pop()
+                else:
+                    raise Exceptionn("WRONG INP: parenthesis")
+            elif re.match("[a-vy-zA0-9]+", self.mapper[i:]):
+                kk = re.match("[a-vy-zA0-9]+", self.mapper[i:])
+                self._mapper_rpn.append([self.mapper[i+kk.start():i+kk.end()]])
+                inc = (kk.end() - kk.start()) 
+            else:
+                print "WRONG INP"
+            i += inc
+
+        if "(" in signs:
+            raise Exception("WRONG INP: left parenthesis")
+        while signs:
+            self._mapper_rpn.append(signs.pop())
+
+
+    def _input_broadcasting(self):
+        inp_arr = []
+        for smb in self._mapper_rpn:
+            #pdb.set_trace()
+            if smb in [".", "x"]:
+                right = inp_arr.pop()
+                left = inp_arr.pop()
+                if smb == ".":
+                    #pdb.set_trace()
+                    # for now I'm assuming that either they have the same shape or shape=(1,)
+                    if self.inputs[right[0]].shape == self.inputs[left[0]].shape:
+                        #don't have to do anything, have already the proper shape
+                        pass
+                    elif self.inputs[right[0]].shape == (1,):
+                        for inp in right:
+                            self.inputs[inp] = \
+                                np.broadcast_to(self.inputs[inp], self.inputs[left[0]].shape)
+
+                    elif self.inputs[left[0]].shape == (1,):
+                        for inp in left:
+                            self.inputs[inp] = \
+                                np.broadcast_to(self.inputs[inp], self.inputs[right[0]].shape)
+
+                    else:
+                        raise Exception("cannot broadcast")
+        
+
+                elif smb == "x":
+                    # should I check if shape doesn't contain ones??
+                    left_ndim = self.inputs[left[0]].ndim
+                    right_ndim = self.inputs[right[0]].ndim
+                    out_shape = self.inputs[left[0]].shape + self.inputs[right[0]].shape
+                    for inp in left:
+                        #pdb.set_trace()
+                        # how to do it without a loop??
+                        for d in range(right_ndim):
+                            self.inputs[inp] = self.inputs[inp][...,np.newaxis]
+                        #pdb.set_trace()
+                        self.inputs[inp] = np.broadcast_to(self.inputs[inp], out_shape)
+
+                    for inp in right:
+                        for d in range(left_ndim):
+                            self.inputs[inp] = self.inputs[inp][np.newaxis, :]
+                        self.inputs[inp] = np.broadcast_to(self.inputs[inp], out_shape)
+
+                inp_arr.append(left+right)
+
+            else:
+                inp_arr.append(smb)
 
 
 
 
     def run(self):
+        #pdb.set_trace()
         self.output = self.function(**self.inputs)
 
 
