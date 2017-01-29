@@ -11,11 +11,15 @@ def my_function_2(a, b):
     #pdb.set_trace()
     return a * b - 9
 
+def my_function_2a(a, b):
+    return a+b, a-b
+
 def my_function_3(a, b, c):
     return a * b - c
 
 def my_function_4(a, b, c, d):
     return a * b - c * d
+
 
 # TODO: test np.outer(self.inputs_usr["a"], self.inputs_usr["b"]) = \
 # self.inputs["a"] * self.inputs["b"]
@@ -32,10 +36,23 @@ def test_single_node_1():
         ({"a":[3, 1, 8], "b":[2]}, [-3, -7, 7]),
         ])
 def test_single_node_2(inputs_dic, expected_output):
-    sn = SNode(function=my_function_2, mapper='a.b', inputs=inputs_dic)
+    sn = SNode(function=my_function_2, mapper='a.b', inputs=inputs_dic, outp_name="ff")
     sn.run()
     assert (sn.output == expected_output).all()
+    assert (sn.inputs["ff"] == expected_output).all()
 
+@pytest.mark.parametrize("inputs_dic, expected_output", [
+        ({"a":[3, 1, 8], "b":[0, 1, 2]}, ([3, 2, 10], [3, 0, 6])),
+        ({"a":[3, 1, 8], "b":[2]}, ([5, 3, 10], [1, -1, 6])),
+        ])
+def test_single_node_2a(inputs_dic, expected_output):
+    outp_name = ["out1", "out2"]
+    sn = SNode(function=my_function_2a, mapper='a.b', inputs=inputs_dic, 
+               outp_name=outp_name)
+    sn.run()
+    for i, exp in enumerate(expected_output):
+        assert (sn.output[i] == exp).all()
+        assert (sn.inputs[outp_name[i]] == exp).all()
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
         ({"a":[3, 1], "b":[1, 2, 4]}, np.array([[-6, -3, 3], [-8, -7, -5]])),
@@ -138,3 +155,4 @@ def test_single_node_wrong_input(inputs_dic):
 def test_single_node_wrong_key():
     with pytest.raises(Exception):
         sn = SNode(function=my_function_2, mapper='a.b', inputs={"a":[3], "c":[0]})
+

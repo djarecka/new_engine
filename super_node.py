@@ -4,8 +4,11 @@ import pdb
 
 
 class SNode(object):
-    def __init__(self, function, mapper, inputs):
-        self.function = function
+    def __init__(self, function, mapper, inputs, outp_name=None):
+        if type(function) is list:
+            self.functions = function
+        else:
+            self.functions = [function]
         r = re.compile("^[a-zA-Z.\(\)]*$")
         if r.match(mapper):
             self.mapper = mapper
@@ -17,6 +20,8 @@ class SNode(object):
         for key in inputs:
             self.inputs[key] = np.array(inputs[key])
         
+        self.outp_name = outp_name
+
         #pdb.set_trace()
         self._mapper_to_inputs()
 
@@ -110,16 +115,20 @@ class SNode(object):
 
 
     def run(self):
-        #pdb.set_trace()
-        self.output = self.function(**self.inputs)
+        for fun in self.functions:
+            self.output = fun(**self.inputs)
+            if type(self.outp_name) is list:
+                for i,nm in enumerate(self.outp_name):
+                    self.inputs[nm] = self.output[i]
+            elif type(self.outp_name) is str:
+                self.inputs[self.outp_name] = self.output
+            # dodac jakis assert
+            
 
 
-    
 
-
-# nie dziala z dwoma nawiasami po lewej i prawej
-# czy outer produck tylko dla 1d?? tak zakladam
 # sprawdzanie argumentow f-cji i dopasowywanie (na poczatku jako kwrgs)
 # tworzenie tablic a/b w zaleznosci od ./x i podawanie tego do f-cji
 # zrezygnowac z warunku, ze a i b trza w init podawac?
-# czytanie jak w kalkulatrorze, najpierw nawiasy
+# nazwy nie moga miec "x", czy to ok?
+
