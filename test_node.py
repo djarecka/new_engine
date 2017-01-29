@@ -3,21 +3,21 @@ import numpy as np
 
 from super_node import SNode
 
-def my_function_1(a):
+def my_function_1(a, **dict):
     #pdb.set_trace()
     return a**2 - 9
 
-def my_function_2(a, b):
+def my_function_2(a, b, **dict):
     #pdb.set_trace()
     return a * b - 9
 
-def my_function_2a(a, b):
+def my_function_2a(a, b, **dict):
     return a+b, a-b
 
-def my_function_3(a, b, c):
+def my_function_3(a, b, c, **dict):
     return a * b - c
 
-def my_function_4(a, b, c, d):
+def my_function_4(a, b, c, d, **dict):
     return a * b - c * d
 
 
