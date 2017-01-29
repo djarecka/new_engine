@@ -4,52 +4,59 @@ import pdb
 
 
 class SNode(object):
-    def __init__(self, function, mapper, inputs, outp_name=None):
-        if type(function) is list:
-            self.functions = function
-        else:
-            self.functions = [function]
+    def __init__(self, function, mapper, inputs, outp_name=None, run_node=True):
         r = re.compile("^[a-zA-Z.\(\)]*$")
         if r.match(mapper):
-            self.mapper = mapper
+            pass
+            #self.mapper = mapper
         else: 
             raise Exception("wrong mapper")
         # property? TODO
         self.inputs_usr = inputs
-        self.inputs = {}
-        for key in inputs:
-            self.inputs[key] = np.array(inputs[key])
         
         self.outp_name = outp_name
+        self.run_node = run_node
+        
+        self.inputs = None
+        if self.run_node:
+            #pdb.set_trace()
+            self.inputs = {}
+            for key in inputs:
+                self.inputs[key] = np.array(inputs[key])
 
-        #pdb.set_trace()
-        self._mapper_to_inputs()
+            self._mapper_to_inputs(mapper)
+
+        if type(function) is list:
+            self.functions = function #TODO: extra checks?
+        else:
+            self.functions = [(function, self.inputs, mapper)]
 
 
-    def _mapper_to_inputs(self):
-        self._rpn()
-        if len(self._mapper_rpn) > 1:
-            self._input_broadcasting()
+
+    def _mapper_to_inputs(self, mapper):
+        _mapper_rpn = self._rpn(mapper)
+        if len(_mapper_rpn) > 1:
+            self._input_broadcasting(_mapper_rpn)
 
 
-    def _rpn(self):
-        self._mapper_rpn = []
+    def _rpn(self, mapper):
+        _mapper_rpn = []
         signs = []
         i=0
-        while i < len(self.mapper):    
-            l = self.mapper[i]
+        while i < len(mapper):    
+            l = mapper[i]
             inc=1
             if l in ["(", ".", "x"]:
                 signs.append(l)
             elif l == ")":
-                self._mapper_rpn.append(signs.pop())
+                _mapper_rpn.append(signs.pop())
                 if signs[-1] == "(":
                     signs.pop()
                 else:
                     raise Exceptionn("WRONG INP: parenthesis")
-            elif re.match("[a-vy-zA0-9]+", self.mapper[i:]):
-                kk = re.match("[a-vy-zA0-9]+", self.mapper[i:])
-                self._mapper_rpn.append([self.mapper[i+kk.start():i+kk.end()]])
+            elif re.match("[a-vy-zA0-9]+", mapper[i:]):
+                kk = re.match("[a-vy-zA0-9]+", mapper[i:])
+                _mapper_rpn.append([mapper[i+kk.start():i+kk.end()]])
                 inc = (kk.end() - kk.start()) 
             else:
                 print "WRONG INP"
@@ -58,12 +65,14 @@ class SNode(object):
         if "(" in signs:
             raise Exception("WRONG INP: left parenthesis")
         while signs:
-            self._mapper_rpn.append(signs.pop())
+            _mapper_rpn.append(signs.pop())
+        
+        return _mapper_rpn
 
 
-    def _input_broadcasting(self):
+    def _input_broadcasting(self, _mapper_rpn):
         inp_arr = []
-        for smb in self._mapper_rpn:
+        for smb in _mapper_rpn:
             #pdb.set_trace()
             if smb in [".", "x"]:
                 right = inp_arr.pop()
@@ -112,18 +121,25 @@ class SNode(object):
                 inp_arr.append(smb)
 
 
+#    def __add__(self, second_node):
+#        self.inp_sec = second_node.inputs_usr
+
 
 
     def run(self):
-        for fun in self.functions:
-            self.output = fun(**self.inputs)
-            if type(self.outp_name) is list:
-                for i,nm in enumerate(self.outp_name):
-                    self.inputs[nm] = self.output[i]
-            elif type(self.outp_name) is str:
-                self.inputs[self.outp_name] = self.output
-            # dodac jakis assert
-            
+        if self.run_node:
+            for (fun, inp, _) in self.functions:
+                if inp:
+                    self.output = fun(**inp)
+                    if type(self.outp_name) is list:
+                        for i,nm in enumerate(self.outp_name):
+                            self.inputs[nm] = self.output[i]
+                    elif type(self.outp_name) is str:
+                        self.inputs[self.outp_name] = self.output
+                # dodac jakis assert
+        else:
+            # TODO check if the node has all fields and try to run?
+            raise Exception("The node is not design to be run")
 
 
 
@@ -131,4 +147,4 @@ class SNode(object):
 # tworzenie tablic a/b w zaleznosci od ./x i podawanie tego do f-cji
 # zrezygnowac z warunku, ze a i b trza w init podawac?
 # nazwy nie moga miec "x", czy to ok?
-
+# napisac jakis dekorator aby do arg f-cji dodawal  **dict (albo tworzyc jakis kolejny sub-slownik) 
