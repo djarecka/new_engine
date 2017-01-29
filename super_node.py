@@ -29,15 +29,16 @@ class SNode(object):
         if type(function) is list:
             self.functions = function #TODO: extra checks?
         else:
-            self.functions = [(function, self.inputs, mapper)]
+            self.functions = [(function, self.inputs, mapper, outp_name)]
 
 
 
     def _mapper_to_inputs(self, mapper):
         _mapper_rpn = self._rpn(mapper)
+        #pdb.set_trace()
         if len(_mapper_rpn) > 1:
             self._input_broadcasting(_mapper_rpn)
-
+            
 
     def _rpn(self, mapper):
         _mapper_rpn = []
@@ -49,7 +50,8 @@ class SNode(object):
             if l in ["(", ".", "x"]:
                 signs.append(l)
             elif l == ")":
-                _mapper_rpn.append(signs.pop())
+                if len(signs) > 1:
+                    _mapper_rpn.append(signs.pop())
                 if signs[-1] == "(":
                     signs.pop()
                 else:
@@ -121,22 +123,32 @@ class SNode(object):
                 inp_arr.append(smb)
 
 
-#    def __add__(self, second_node):
-#        self.inp_sec = second_node.inputs_usr
-
+    def __add__(self, second_node):
+        for (key, val) in second_node.inputs_usr.items():
+            if key in self.inputs:
+                raise Exception("a key from second input already exists in self.inputs") #warnings?
+            else:
+                self.inputs[key] = np.array(val)
+        
+        self.functions += second_node.functions
 
 
     def run(self):
         if self.run_node:
-            for (fun, inp, _) in self.functions:
-                if inp:
-                    self.output = fun(**inp)
-                    if type(self.outp_name) is list:
-                        for i,nm in enumerate(self.outp_name):
-                            self.inputs[nm] = self.output[i]
-                    elif type(self.outp_name) is str:
-                        self.inputs[self.outp_name] = self.output
-                # dodac jakis assert
+            for (fun, inp, map, out_nm) in self.functions:
+                if not inp:
+                    # have to create mapping before running function
+                    self._mapper_to_inputs(map)
+                
+                self.output = fun(**self.inputs)
+                #pdb.set_trace()
+                if type(out_nm) is list:
+                    for i,nm in enumerate(out_nm):
+                        self.inputs[nm] = self.output[i]
+                elif type(out_nm) is str:
+                    self.inputs[out_nm] = self.output
+                    
+                #pdb.set_trace()
         else:
             # TODO check if the node has all fields and try to run?
             raise Exception("The node is not design to be run")
