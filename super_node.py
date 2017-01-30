@@ -4,7 +4,7 @@ import pdb
 
 
 class SNode(object):
-    def __init__(self, function, mapper, inputs, outp_name=None, run_node=True):
+    def __init__(self, function, mapper, inputs={}, outp_name=None, run_node=True):
         r = re.compile("^[a-zA-Z.\(\)]*$")
         if r.match(mapper):
             pass
@@ -23,7 +23,7 @@ class SNode(object):
             self.inputs = {}
             for key in inputs:
                 self.inputs[key] = np.array(inputs[key])
-
+            
             self._mapper_to_inputs(mapper)
 
         if type(function) is list:
@@ -47,15 +47,19 @@ class SNode(object):
         while i < len(mapper):    
             l = mapper[i]
             inc=1
+            #pdb.set_trace()
             if l in ["(", ".", "x"]:
                 signs.append(l)
             elif l == ")":
-                if len(signs) > 1:
-                    _mapper_rpn.append(signs.pop())
-                if signs[-1] == "(":
+                #pdb.set_trace()
+                if signs[-1] == "(": #for (a).(b)
                     signs.pop()
                 else:
-                    raise Exceptionn("WRONG INP: parenthesis")
+                    _mapper_rpn.append(signs.pop())
+                    if signs[-1] == "(":
+                        signs.pop()
+                    else:
+                        raise Exception("WRONG INP: parenthesis")
             elif re.match("[a-vy-zA0-9]+", mapper[i:]):
                 kk = re.match("[a-vy-zA0-9]+", mapper[i:])
                 _mapper_rpn.append([mapper[i+kk.start():i+kk.end()]])
