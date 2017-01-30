@@ -60,7 +60,7 @@ def test_2nodes_1b():
     assert (sn1.inputs["ab"] == expected_inp_ab).all()
 
 
-def test_3nodes():
+def test_3nodes_1():
     inputs_1 = {"a":[3, 1], "b":[1, 2]}
     inputs_2 = {"c": [1,0], "d": [2,1]}
     sn1 = SNode(function=my_function_dot, mapper='a.b', inputs=inputs_1, outp_name="ab")
@@ -77,3 +77,18 @@ def test_3nodes():
     assert (sn1.inputs["cd"] == expected_inp_cd).all()
 
 
+def test_3nodes_1a():
+    inputs_1 = {"a":[3, 1], "b":[1, 2]}
+    inputs_2 = {"c": [1,0], "d": [2,1]}
+    sn1 = SNode(function=my_function_dot, mapper='a.b', inputs=inputs_1, outp_name="ab")
+    sn2 = SNode(function=my_function_dot, arg_map={"c":"a", "d":"b"},  mapper='c.d', 
+                inputs=inputs_2, outp_name="cd")
+    sn3 = SNode(function=my_function_4b, mapper='(ab)x(cd)', run_node=False)
+    sn1.__add__(sn2)
+    sn1.__add__(sn3)
+    expected_inp_a = sn1.inputs["a"] #shouldn't change after run
+    sn1.run()
+    #pdb.set_trace()
+    expected_output = np.array([[1, 3], [0, 2]])
+    assert (sn1.output == expected_output).all()
+    assert (sn1.inputs["a"] == expected_inp_a).all()

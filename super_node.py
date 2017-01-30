@@ -4,8 +4,8 @@ import pdb
 
 
 class SNode(object):
-    def __init__(self, function, mapper, inputs={}, outp_name=None, run_node=True):
-        r = re.compile("^[a-zA-Z.\(\)]*$")
+    def __init__(self, function, mapper, inputs={}, arg_map=None, outp_name=None, run_node=True):
+        r = re.compile("^[a-zA-Z0-9.\(\)]*$")
         if r.match(mapper):
             pass
             #self.mapper = mapper
@@ -29,7 +29,7 @@ class SNode(object):
         if type(function) is list:
             self.functions = function #TODO: extra checks?
         else:
-            self.functions = [(function, self.inputs, mapper, outp_name)]
+            self.functions = [(function, self.inputs, mapper, outp_name, arg_map)]
 
 
 
@@ -139,13 +139,19 @@ class SNode(object):
 
     def run(self):
         if self.run_node:
-            for (fun, inp, map, out_nm) in self.functions:
+            for (fun, inp, map, out_nm, arg) in self.functions:
                 if not inp:
                     # have to create mapping before running function
                     self._mapper_to_inputs(map)
                 
-                self.output = fun(**self.inputs)
-                #pdb.set_trace()
+                if arg: #TODO better
+                    fun_inputs = self.inputs.copy()
+                    for (key, arg_nm) in arg.items():
+                        fun_inputs[arg_nm] = fun_inputs.pop(key)
+                    self.output = fun(**fun_inputs)
+                else:
+                    self.output = fun(**self.inputs)
+               
                 if type(out_nm) is list:
                     for i,nm in enumerate(out_nm):
                         self.inputs[nm] = self.output[i]
