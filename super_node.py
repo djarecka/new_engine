@@ -4,47 +4,65 @@ import pdb
 
 
 class SNode(object):
-    def __init__(self, function, mapper, inputs):
-        self.function = function
-        r = re.compile("^[a-zA-Z.\(\)]*$")
+    def __init__(self, function, mapper, inputs={}, arg_map=None, outp_name=None, run_node=True):
+        r = re.compile("^[a-zA-Z0-9.\(\)]*$")
         if r.match(mapper):
-            self.mapper = mapper
+            pass
+            #self.mapper = mapper
         else: 
             raise Exception("wrong mapper")
         # property? TODO
         self.inputs_usr = inputs
-        self.inputs = {}
-        for key in inputs:
-            self.inputs[key] = np.array(inputs[key])
         
+        self.outp_name = outp_name
+        self.run_node = run_node
+        
+        self.inputs = None
+        if self.run_node:
+            #pdb.set_trace()
+            self.inputs = {}
+            for key in inputs:
+                self.inputs[key] = np.array(inputs[key])
+            
+            self._mapper_to_inputs(mapper)
+
+        if type(function) is list:
+            self.functions = function #TODO: extra checks?
+        else:
+            self.functions = [(function, self.inputs, mapper, outp_name, arg_map)]
+
+
+
+    def _mapper_to_inputs(self, mapper):
+        _mapper_rpn = self._rpn(mapper)
         #pdb.set_trace()
-        self._mapper_to_inputs()
+        if len(_mapper_rpn) > 1:
+            self._input_broadcasting(_mapper_rpn)
+            
 
-
-    def _mapper_to_inputs(self):
-        self._rpn()
-        if len(self._mapper_rpn) > 1:
-            self._input_broadcasting()
-
-
-    def _rpn(self):
-        self._mapper_rpn = []
+    def _rpn(self, mapper):
+        _mapper_rpn = []
         signs = []
         i=0
-        while i < len(self.mapper):    
-            l = self.mapper[i]
+        while i < len(mapper):    
+            l = mapper[i]
             inc=1
+            #pdb.set_trace()
             if l in ["(", ".", "x"]:
                 signs.append(l)
             elif l == ")":
-                self._mapper_rpn.append(signs.pop())
-                if signs[-1] == "(":
+                #pdb.set_trace()
+                if signs[-1] == "(": #for (a).(b)
                     signs.pop()
                 else:
-                    raise Exceptionn("WRONG INP: parenthesis")
-            elif re.match("[a-vy-zA0-9]+", self.mapper[i:]):
-                kk = re.match("[a-vy-zA0-9]+", self.mapper[i:])
-                self._mapper_rpn.append([self.mapper[i+kk.start():i+kk.end()]])
+                    _mapper_rpn.append(signs.pop())
+                    if signs[-1] == "(":
+                        signs.pop()
+                    else:
+                        raise Exception("WRONG INP: parenthesis")
+            elif re.match("[a-vy-zA0-9]+", mapper[i:]):
+                kk = re.match("[a-vy-zA0-9]+", mapper[i:])
+                _mapper_rpn.append([mapper[i+kk.start():i+kk.end()]])
                 inc = (kk.end() - kk.start()) 
             else:
                 print "WRONG INP"
@@ -53,12 +71,14 @@ class SNode(object):
         if "(" in signs:
             raise Exception("WRONG INP: left parenthesis")
         while signs:
-            self._mapper_rpn.append(signs.pop())
+            _mapper_rpn.append(signs.pop())
+        
+        return _mapper_rpn
 
 
-    def _input_broadcasting(self):
+    def _input_broadcasting(self, _mapper_rpn):
         inp_arr = []
-        for smb in self._mapper_rpn:
+        for smb in _mapper_rpn:
             #pdb.set_trace()
             if smb in [".", "x"]:
                 right = inp_arr.pop()
@@ -107,19 +127,46 @@ class SNode(object):
                 inp_arr.append(smb)
 
 
+    def __add__(self, second_node):
+        for (key, val) in second_node.inputs_usr.items():
+            if key in self.inputs:
+                raise Exception("a key from second input already exists in self.inputs") #warnings?
+            else:
+                self.inputs[key] = np.array(val)
+        
+        self.functions += second_node.functions
 
 
     def run(self):
-        #pdb.set_trace()
-        self.output = self.function(**self.inputs)
+        if self.run_node:
+            for (fun, inp, map, out_nm, arg) in self.functions:
+                if not inp:
+                    # have to create mapping before running function
+                    self._mapper_to_inputs(map)
+                
+                if arg: #TODO better
+                    fun_inputs = self.inputs.copy()
+                    for (key, arg_nm) in arg.items():
+                        fun_inputs[arg_nm] = fun_inputs.pop(key)
+                    self.output = fun(**fun_inputs)
+                else:
+                    self.output = fun(**self.inputs)
+               
+                if type(out_nm) is list:
+                    for i,nm in enumerate(out_nm):
+                        self.inputs[nm] = self.output[i]
+                elif type(out_nm) is str:
+                    self.inputs[out_nm] = self.output
+                    
+                #pdb.set_trace()
+        else:
+            # TODO check if the node has all fields and try to run?
+            raise Exception("The node is not design to be run")
 
 
-    
 
-
-# nie dziala z dwoma nawiasami po lewej i prawej
-# czy outer produck tylko dla 1d?? tak zakladam
 # sprawdzanie argumentow f-cji i dopasowywanie (na poczatku jako kwrgs)
 # tworzenie tablic a/b w zaleznosci od ./x i podawanie tego do f-cji
 # zrezygnowac z warunku, ze a i b trza w init podawac?
-# czytanie jak w kalkulatrorze, najpierw nawiasy
+# nazwy nie moga miec "x", czy to ok?
+# napisac jakis dekorator aby do arg f-cji dodawal  **dict (albo tworzyc jakis kolejny sub-slownik) 
