@@ -177,7 +177,7 @@ class SNode(object):
                         self.var_hist[key] = val
        
             self.functions += second_node.functions
-
+            
         elif isinstance(second_node, ReduNode): # checking self.redu ?? TODO
             # TODO we should probably allow for multiple reducers
             self.reducer_and_fun = (second_node.reducer, second_node.reducer_function) 

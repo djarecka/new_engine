@@ -3,7 +3,7 @@ import pytest, pdb
 
 from super_node import SNode, ReduNode
 
-from test_node import my_function_1, my_function_2, my_function_4 
+from test_node import my_function_1, my_function_2, my_function_4, my_function_3dot 
 from test_multi_nodes import my_function_dot, my_function_4a
 
 
@@ -142,6 +142,24 @@ def test_reducer_5(reducer_var, expected_redu):
         assert (out[1] == expected_redu[i][1]).all()
 
 
+
+@pytest.mark.parametrize("reducer_var, expected_redu", [
+        ("a", [(3, [[3, 0], [6, 0]]), (1, [[1, 0], [2, 0]])]),
+        ("b", [(1, [[3, 0], [1, 0]]), (2, [[6, 0], [2, 0]])]),
+        ("c", [(1, [[3, 6], [1, 2]]), (0, [[0, 0], [0, 0]])])
+        ])
+def test_reducer_6(reducer_var, expected_redu):
+    inputs_1 = {"a":[3, 1], "b":[1, 2], "c": [1,0]}
+    sn = SNode(function=my_function_3dot, mapper='(axb)xc', inputs=inputs_1, redu=True)
+    rn = ReduNode(reducer=[reducer_var])
+    sn.__add__(rn)
+    sn.run()
+    expected_output = [[[3, 0], [6, 0]], [[1, 0], [2, 0]]]
+    pdb.set_trace()
+    assert (sn.output == expected_output).all()
+    for (i,out) in enumerate(sn.output_reduced):
+        assert out[0] == expected_redu[i][0]
+        assert (out[1] == expected_redu[i][1]).all()
 
 
 #pomyslec czy drugo node musi miec redu=true
