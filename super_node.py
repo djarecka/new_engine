@@ -215,7 +215,6 @@ class SNode(object):
 
     def run_reducer(self):
         # assuming that we reduce self.output, i.e. the result of the last function
-        
         # assuming that there is one reducer TODO
         #pdb.set_trace()
         reducer_key = self.reducer_and_fun[0][0]
@@ -231,20 +230,18 @@ class SNode(object):
             redu_ind = [x for x in np.ndindex(reducer_inp.shape)]
             if reducer_fun:
                  self.output_reduced = [(reducer_inp[x], 
-                                getattr(output_moveaxis[x,...], reducer_fun)()) for x in redu_ind]
+                                getattr(output_moveaxis[x], reducer_fun)()) for x in redu_ind]
             else:
                 # TODO should i really use list?
-                self.output_reduced = [(reducer_inp[x], output_moveaxis[x,...]) for x in redu_ind] 
+                #pdb.set_trace()
+                self.output_reduced = [(reducer_inp[x], output_moveaxis[x]) for x in redu_ind] 
         else: #the field was just a number
             if reducer_fun:
-                self.output_reduced = [(reducer_inp[0], getattr(self.output[:], reducer_fun)())]
+                self.output_reduced = [(reducer_inp[0], getattr(self.output, reducer_fun)())]
             else:
-                self.output_reduced = [(reducer_inp[0], self.output[:])]
+                self.output_reduced = [(reducer_inp[0], self.output)]
             
         
-
-
-
 class ReduNode(object):
     #TODO should inherit from SNode??
     def __init__(self, reducer, reducer_function=None):

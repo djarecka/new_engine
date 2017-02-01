@@ -186,9 +186,7 @@ def test_single_node_9(inputs_dic, expected_output):
 def test_single_node_10(inputs_dic, expected_output):
     sn = SNode(function=my_function_3dot, mapper='(axb)xc', inputs=inputs_dic)
     sn.run()
-    pdb.set_trace()
     assert (sn.output == expected_output).all()
-
 
 
 @pytest.mark.parametrize("mapper_str", ['a*b', '(a.b', 'axb)', 'a,b'])

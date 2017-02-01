@@ -17,7 +17,7 @@ def test_reducer_1():
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
-        #({"a":[3, 1, 8], "b":[0, 1, 2]}, ([-9, -8, 7], [(0, [-9]), (1, [-8]), (2, [7])])),
+        ({"a":[3, 1, 8], "b":[0, 1, 2]}, ([-9, -8, 7], [(0, [-9]), (1, [-8]), (2, [7])])),
         ({"a":[3, 1, 8], "b":[2]}, ([-3, -7, 7], [(2, [-3, -7, 7])])),
         ])
 def test_reducer_2(inputs_dic, expected_output):
@@ -25,6 +25,7 @@ def test_reducer_2(inputs_dic, expected_output):
     rn = ReduNode(reducer=["b"])
     sn.__add__(rn)
     sn.run()
+    #pdb.set_trace()
     assert (sn.output == expected_output[0]).all()
     assert (sn.inputs["ff"] == expected_output[0]).all()
     for (i,out) in enumerate(sn.output_reduced):
@@ -35,9 +36,9 @@ def test_reducer_2(inputs_dic, expected_output):
 @pytest.mark.parametrize("inputs_dic, expected_output, expected_redu", [
         ({"a":[3, 1], "b":[1, 2, 4]}, np.array([[-6, -3, 3], [-8, -7, -5]]), 
          [(3, [-6, -3, 3]), (1, [-8, -7, -5])]),
-#        ({"a":[[3, 1]], "b":[1, 2, 4]}, np.array([[[-6, -3, 3], [-8, -7, -5]]])),
-#        ({"a":[[3, 1], [30, 10]], "b":[1, 2, 4]},
-#         np.array([[[-6, -3, 3], [-8, -7, -5]],[[21, 51, 111],[1, 11, 31]]])),
+         ({"a":[[3, 1], [30, 10]], "b":[1, 2, 4]}, #TODO to nie dziala!!
+         np.array([[[-6, -3, 3], [-8, -7, -5]],[[21, 51, 111],[1, 11, 31]]]),
+         [(3, [-6, -3, 3]), (1, [-8, -7, -5]), (30, [21, 51, 111]), (10, [1, 11, 31])]),
 #        ({"a":[3, 1], "b":[2]}, np.array([[-3], [-7]])),
         ])
 def test_reducer_3(inputs_dic, expected_output, expected_redu):
@@ -45,6 +46,7 @@ def test_reducer_3(inputs_dic, expected_output, expected_redu):
     rn = ReduNode(reducer=["a"])
     sn.__add__(rn)
     sn.run()
+    #pdb.set_trace()
     assert (sn.output == expected_output).all()
     for (i,out) in enumerate(sn.output_reduced):
         assert out[0] == expected_redu[i][0]
