@@ -26,7 +26,6 @@ def test_2nodes_1():
     sn1.__add__(sn2)
     sn1.run()
     expected_output = np.array([[1, 3], [0, 2]])
-    pdb.set_trace()
     assert (sn1.output == expected_output).all()
 
 
@@ -40,7 +39,6 @@ def test_2nodes_1a():
     sn1.run()
     expected_output = np.array([[1, 3], [0, 2]])
     expected_inp_ab = np.array([-6, -7])
-    pdb.set_trace()
     assert (sn1.output == expected_output).all()
     assert (sn1.inputs["out"] == expected_output).all()
     assert (sn1.inputs["ab"] == expected_inp_ab).all()

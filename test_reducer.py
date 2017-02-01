@@ -45,7 +45,6 @@ def test_reducer_3(inputs_dic, expected_output, expected_redu):
     rn = ReduNode(reducer=["a"])
     sn.__add__(rn)
     sn.run()
-    pdb.set_trace()
     assert (sn.output == expected_output).all()
     for (i,out) in enumerate(sn.output_reduced):
         assert out[0] == expected_redu[i][0]
@@ -61,7 +60,6 @@ def test_reducer_3a(inputs_dic, expected_output, expected_redu):
     rn = ReduNode(reducer=["b"])
     sn.__add__(rn)
     sn.run()
-    pdb.set_trace()
     assert (sn.output == expected_output).all()
     for (i,out) in enumerate(sn.output_reduced):
         assert out[0] == expected_redu[i][0]
@@ -86,13 +84,37 @@ def test_reducer_4(reducer_var, expected_redu):
     sn1.run()
     expected_output = np.array([[1, 3], [0, 2]])
     expected_inp_ab = np.array([-6, -7])
-    pdb.set_trace()
     assert (sn1.output == expected_output).all()
     assert (sn1.inputs["out"] == expected_output).all()
     assert (sn1.inputs["ab"] == expected_inp_ab).all()
     for (i,out) in enumerate(sn1.output_reduced):
         assert out[0] == expected_redu[i][0]
         assert (out[1] == expected_redu[i][1]).all()
+
+
+@pytest.mark.parametrize("reducer_var, reducer_fun, expected_redu", [
+        ("a", "sum", [(3, 4) , (1, 2)]),
+        ("b", "min", [(1, 1) , (2, 0)]),
+        ("c", "sum", [(1, 1) , (0, 5)]),
+        ("d", "max", [(2, 1) , (1, 3)]),
+        ])
+def test_reducer_4a(reducer_var, reducer_fun, expected_redu):
+    inputs_1 = {"a":[3, 1], "b":[1, 2]}
+    inputs_2 = {"c": [1,0], "d": [2,1]}
+    sn1 = SNode(function=my_function_2, mapper='a.b', inputs=inputs_1, outp_name="ab", redu=True)
+    sn2 = SNode(function=my_function_4, mapper='(a.b)x(c.d)', inputs=inputs_2, outp_name="out",
+                run_node=False, redu=True)
+    sn1.__add__(sn2)
+    rn = ReduNode(reducer=[reducer_var], reducer_function=reducer_fun)
+    sn1.__add__(rn)
+    sn1.run()
+    expected_output = np.array([[1, 3], [0, 2]])
+    expected_inp_ab = np.array([-6, -7])
+    assert (sn1.output == expected_output).all()
+    assert (sn1.inputs["out"] == expected_output).all()
+    assert (sn1.inputs["ab"] == expected_inp_ab).all()
+    for (i,out) in enumerate(sn1.output_reduced):
+        assert out == expected_redu[i]
 
 
 @pytest.mark.parametrize("reducer_var, expected_redu", [
@@ -102,7 +124,7 @@ def test_reducer_4(reducer_var, expected_redu):
         ("c", [(1, [1, 0]) , (0, [3, 2])]),
         ("d", [(2, [1, 0]) , (1, [3, 2])]),
         ])
-def test_reducer_4a(reducer_var, expected_redu):
+def test_reducer_5(reducer_var, expected_redu):
     inputs_1 = {"a":[3, 1], "b":[1, 2]}
     inputs_2 = {"c": [1,0], "d": [2,1]}
     sn1 = SNode(function=my_function_dot, mapper='a.b', inputs=inputs_1, outp_name="ab", redu=True)
@@ -111,7 +133,6 @@ def test_reducer_4a(reducer_var, expected_redu):
     rn = ReduNode(reducer=[reducer_var])
     sn1.__add__(rn)
     sn1.run()
-    if reducer_var == "ab": pdb.set_trace()
     expected_output = np.array([[1, 3], [0, 2]])
     expected_inp_ab = np.array([[3, 3], [2, 2]])
     assert (sn1.output == expected_output).all()

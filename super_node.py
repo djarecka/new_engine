@@ -160,7 +160,6 @@ class SNode(object):
     def __add__(self, second_node):
         #pdb.set_trace()
         if isinstance(second_node, SNode): # should I create a different add for ReduNode??
-            pdb.set_trace()
             for (key, val) in second_node.inputs_usr.items():
                 if key in self.inputs:
                     raise Exception("a key from second input already exists in self.inputs") #warnings?
@@ -181,8 +180,7 @@ class SNode(object):
 
         elif isinstance(second_node, ReduNode): # checking self.redu ?? TODO
             # TODO we should probably allow for multiple reducers
-            self.reducer = second_node.reducer 
-            self.redu_function = second_node.redu_function
+            self.reducer_and_fun = (second_node.reducer, second_node.reducer_function) 
 
     def run(self):
         if self.run_node:
@@ -211,7 +209,7 @@ class SNode(object):
             raise Exception("The node is not design to be run")
 
         # for now it works only at the end, so no self.function needed, but TODO 
-        if self.redu and self.reducer:
+        if self.redu and self.reducer_and_fun:
             self.run_reducer()
 
 
@@ -219,7 +217,9 @@ class SNode(object):
         # assuming that we reduce self.output, i.e. the result of the last function
         
         # assuming that there is one reducer TODO
-        reducer_key = self.reducer[0]
+        #pdb.set_trace()
+        reducer_key = self.reducer_and_fun[0][0]
+        reducer_fun = self.reducer_and_fun[1]
         axis_redu = self.redu_mapping[reducer_key]
         reducer_inp = self.inputs_usr[reducer_key]
 
@@ -229,10 +229,17 @@ class SNode(object):
                         
             #is it ok to flatten?
             redu_ind = [x for x in np.ndindex(reducer_inp.shape)]
-            # TODO should i really use list?
-            self.output_reduced = [(reducer_inp[x], output_moveaxis[x,...]) for x in redu_ind] 
+            if reducer_fun:
+                 self.output_reduced = [(reducer_inp[x], 
+                                getattr(output_moveaxis[x,...], reducer_fun)()) for x in redu_ind]
+            else:
+                # TODO should i really use list?
+                self.output_reduced = [(reducer_inp[x], output_moveaxis[x,...]) for x in redu_ind] 
         else: #the field was just a number
-            self.output_reduced = [(reducer_inp[0], self.output[:])]
+            if reducer_fun:
+                self.output_reduced = [(reducer_inp[0], getattr(self.output[:], reducer_fun)())]
+            else:
+                self.output_reduced = [(reducer_inp[0], self.output[:])]
             
         
 
@@ -240,9 +247,9 @@ class SNode(object):
 
 class ReduNode(object):
     #TODO should inherit from SNode??
-    def __init__(self, reducer, redu_function=None):
+    def __init__(self, reducer, reducer_function=None):
         self.reducer = reducer
-        self.redu_function = redu_function 
+        self.reducer_function = reducer_function 
 
 # sprawdzanie argumentow f-cji i dopasowywanie (na poczatku jako kwrgs)
 # tworzenie tablic a/b w zaleznosci od ./x i podawanie tego do f-cji
