@@ -241,7 +241,7 @@ class SNode(object):
             else:
                 self.output_reduced = [(reducer_inp[0], self.output)]
             
-        
+
 class ReduNode(object):
     #TODO should inherit from SNode??
     def __init__(self, reducer, reducer_function=None):

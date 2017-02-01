@@ -36,10 +36,10 @@ def test_reducer_2(inputs_dic, expected_output):
 @pytest.mark.parametrize("inputs_dic, expected_output, expected_redu", [
         ({"a":[3, 1], "b":[1, 2, 4]}, np.array([[-6, -3, 3], [-8, -7, -5]]), 
          [(3, [-6, -3, 3]), (1, [-8, -7, -5])]),
-         ({"a":[[3, 1], [30, 10]], "b":[1, 2, 4]}, #TODO to nie dziala!!
+         ({"a":[[3, 1], [30, 10]], "b":[1, 2, 4]},
          np.array([[[-6, -3, 3], [-8, -7, -5]],[[21, 51, 111],[1, 11, 31]]]),
          [(3, [-6, -3, 3]), (1, [-8, -7, -5]), (30, [21, 51, 111]), (10, [1, 11, 31])]),
-#        ({"a":[3, 1], "b":[2]}, np.array([[-3], [-7]])),
+        ({"a":[3, 1], "b":[2]}, np.array([[-3], [-7]]), [(3, [-3]), (1, [-7])]),
         ])
 def test_reducer_3(inputs_dic, expected_output, expected_redu):
     sn = SNode(function=my_function_2, mapper='axb', inputs=inputs_dic, redu=True)
