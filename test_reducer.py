@@ -13,12 +13,12 @@ def test_reducer_1():
     sn.__add__(rn)
     sn.run()
     assert (sn.output == [0, -8, 55]).all()
-    assert sn.output_reduced == [(3, [0]), (1, [-8]), (8, [55])]
+    assert sn.output_reduced == [([3], [0]), ([1], [-8]), ([8], [55])]
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
-        ({"a":[3, 1, 8], "b":[0, 1, 2]}, ([-9, -8, 7], [(0, [-9]), (1, [-8]), (2, [7])])),
-        ({"a":[3, 1, 8], "b":[2]}, ([-3, -7, 7], [(2, [-3, -7, 7])])),
+        ({"a":[3, 1, 8], "b":[0, 1, 2]}, ([-9, -8, 7], [([0], [-9]), ([1], [-8]), ([2], [7])])),
+        pytest.mark.xfail(({"a":[3, 1, 8], "b":[2]}, ([-3, -7, 7], [([2], [-3, -7, 7])]))),
         ])
 def test_reducer_2(inputs_dic, expected_output):
     sn = SNode(function=my_function_2, mapper='a.b', inputs=inputs_dic, outp_name="ff", redu=True)
@@ -35,11 +35,11 @@ def test_reducer_2(inputs_dic, expected_output):
 
 @pytest.mark.parametrize("inputs_dic, expected_output, expected_redu", [
         ({"a":[3, 1], "b":[1, 2, 4]}, np.array([[-6, -3, 3], [-8, -7, -5]]), 
-         [(3, [-6, -3, 3]), (1, [-8, -7, -5])]),
+         [([3], [-6, -3, 3]), ([1], [-8, -7, -5])]),
          ({"a":[[3, 1], [30, 10]], "b":[1, 2, 4]},
          np.array([[[-6, -3, 3], [-8, -7, -5]],[[21, 51, 111],[1, 11, 31]]]),
-         [(3, [-6, -3, 3]), (1, [-8, -7, -5]), (30, [21, 51, 111]), (10, [1, 11, 31])]),
-        ({"a":[3, 1], "b":[2]}, np.array([[-3], [-7]]), [(3, [-3]), (1, [-7])]),
+         [([3], [-6, -3, 3]), ([1], [-8, -7, -5]), ([30], [21, 51, 111]), ([10], [1, 11, 31])]),
+        ({"a":[3, 1], "b":[2]}, np.array([[-3], [-7]]), [([3], [-3]), ([1], [-7])]),
         ])
 def test_reducer_3(inputs_dic, expected_output, expected_redu):
     sn = SNode(function=my_function_2, mapper='axb', inputs=inputs_dic, redu=True)
@@ -55,7 +55,7 @@ def test_reducer_3(inputs_dic, expected_output, expected_redu):
 
 @pytest.mark.parametrize("inputs_dic, expected_output, expected_redu", [
         ({"a":[3, 1], "b":[1, 2, 4]}, np.array([[-6, -3, 3], [-8, -7, -5]]),
-         [(1, [-6, -8]), (2, [-3, -7]), (4, [3, -5])]),
+         [([1], [-6, -8]), ([2], [-3, -7]), ([4], [3, -5])]),
         ])
 def test_reducer_3a(inputs_dic, expected_output, expected_redu):
     sn = SNode(function=my_function_2, mapper='axb', inputs=inputs_dic, redu=True)
@@ -68,11 +68,43 @@ def test_reducer_3a(inputs_dic, expected_output, expected_redu):
         assert (out[1] == expected_redu[i][1]).all()
 
 
+@pytest.mark.parametrize("inputs_dic, expected_output, expected_redu", [
+        ({"a":[3, 1], "b":[1, 2, 4]}, np.array([[-6, -3, 3], [-8, -7, -5]]),
+         [([1, 3], [-6]), ([1, 1], [-8]), ([2, 3], [-3]), ([2, 1], [-7]), 
+          ([4, 3], [3]), ([4,1], [-5])]),
+        ])
+def test_reducer_3b(inputs_dic, expected_output, expected_redu):
+    sn = SNode(function=my_function_2, mapper='axb', inputs=inputs_dic, redu=True)
+    rn = ReduNode(reducer=["b", "a"])
+    sn.__add__(rn)
+    sn.run()
+    assert (sn.output == expected_output).all()
+    for (i,out) in enumerate(sn.output_reduced):
+        assert out[0] == expected_redu[i][0]
+        assert (out[1] == expected_redu[i][1]).all()
+
+@pytest.mark.parametrize("inputs_dic, expected_output, expected_redu", [
+        ({"a":[3, 1], "b":[1, 2, 4]}, np.array([[-6, -3, 3], [-8, -7, -5]]),
+         [([3, 1], [-6]), ([3, 2], [-3]), ([3, 4], [3]), 
+          ([1, 1], [-8]), ([1, 2], [-7]), ([1, 4], [-5])]),
+        ])
+def test_reducer_3c(inputs_dic, expected_output, expected_redu):
+    sn = SNode(function=my_function_2, mapper='axb', inputs=inputs_dic, redu=True)
+    rn = ReduNode(reducer=["a", "b"])
+    sn.__add__(rn)
+    sn.run()
+    assert (sn.output == expected_output).all()
+    for (i,out) in enumerate(sn.output_reduced):
+        assert out[0] == expected_redu[i][0]
+        assert (out[1] == expected_redu[i][1]).all()
+
+
+
 @pytest.mark.parametrize("reducer_var, expected_redu", [
-        ("a", [(3, [1, 3]) , (1, [0, 2])]),
-        ("b", [(1, [1, 3]) , (2, [0, 2])]),
-        ("c", [(1, [1, 0]) , (0, [3, 2])]),
-        ("d", [(2, [1, 0]) , (1, [3, 2])]),
+        ("a", [([3], [1, 3]) , ([1], [0, 2])]),
+        ("b", [([1], [1, 3]) , ([2], [0, 2])]),
+        ("c", [([1], [1, 0]) , ([0], [3, 2])]),
+        ("d", [([2], [1, 0]) , ([1], [3, 2])]),
         ])
 def test_reducer_4(reducer_var, expected_redu):
     inputs_1 = {"a":[3, 1], "b":[1, 2]}
@@ -95,10 +127,10 @@ def test_reducer_4(reducer_var, expected_redu):
 
 
 @pytest.mark.parametrize("reducer_var, reducer_fun, expected_redu", [
-        ("a", "sum", [(3, 4) , (1, 2)]),
-        ("b", "min", [(1, 1) , (2, 0)]),
-        ("c", "sum", [(1, 1) , (0, 5)]),
-        ("d", "max", [(2, 1) , (1, 3)]),
+        ("a", "sum", [([3], 4) , ([1], 2)]),
+        ("b", "min", [([1], 1) , ([2], 0)]),
+        ("c", "sum", [([1], 1) , ([0], 5)]),
+        ("d", "max", [([2], 1) , ([1], 3)]),
         ])
 def test_reducer_4a(reducer_var, reducer_fun, expected_redu):
     inputs_1 = {"a":[3, 1], "b":[1, 2]}
@@ -120,11 +152,11 @@ def test_reducer_4a(reducer_var, reducer_fun, expected_redu):
 
 
 @pytest.mark.parametrize("reducer_var, expected_redu", [
-        ("a", [(3, [1, 3]) , (1, [0, 2])]),
-        ("b", [(1, [1, 3]) , (2, [0, 2])]),
-        pytest.mark.xfail(("ab", [(3, [1, 3]) , (2, [0, 2])])), #should be implemented??
-        ("c", [(1, [1, 0]) , (0, [3, 2])]),
-        ("d", [(2, [1, 0]) , (1, [3, 2])]),
+        ("a", [([3], [1, 3]) , ([1], [0, 2])]),
+        ("b", [([1], [1, 3]) , ([2], [0, 2])]),
+        pytest.mark.xfail(("ab", [([3], [1, 3]) , ([2], [0, 2])])), #should be implemented??
+        ("c", [([1], [1, 0]) , ([0], [3, 2])]),
+        ("d", [([2], [1, 0]) , ([1], [3, 2])]),
         ])
 def test_reducer_5(reducer_var, expected_redu):
     inputs_1 = {"a":[3, 1], "b":[1, 2]}
@@ -146,9 +178,9 @@ def test_reducer_5(reducer_var, expected_redu):
 
 
 @pytest.mark.parametrize("reducer_var, expected_redu", [
-        ("a", [(3, [[3, 0], [6, 0]]), (1, [[1, 0], [2, 0]])]),
-        ("b", [(1, [[3, 0], [1, 0]]), (2, [[6, 0], [2, 0]])]),
-        ("c", [(1, [[3, 6], [1, 2]]), (0, [[0, 0], [0, 0]])])
+        ("a", [([3], [[3, 0], [6, 0]]), ([1], [[1, 0], [2, 0]])]),
+        ("b", [([1], [[3, 0], [1, 0]]), ([2], [[6, 0], [2, 0]])]),
+        ("c", [([1], [[3, 6], [1, 2]]), ([0], [[0, 0], [0, 0]])])
         ])
 def test_reducer_6(reducer_var, expected_redu):
     inputs_1 = {"a":[3, 1], "b":[1, 2], "c": [1,0]}

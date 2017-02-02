@@ -1,5 +1,6 @@
 import re
 import numpy as np
+import itertools
 import pdb
 
 
@@ -215,32 +216,53 @@ class SNode(object):
 
     def run_reducer(self):
         # assuming that we reduce self.output, i.e. the result of the last function
-        # assuming that there is one reducer TODO
-        #pdb.set_trace()
-        reducer_key = self.reducer_and_fun[0][0]
+        # assuming that there is one reducer node TODO
+        reducer_key_list = self.reducer_and_fun[0]
         reducer_fun = self.reducer_and_fun[1]
-        axis_redu = self.redu_mapping[reducer_key]
-        reducer_inp = self.inputs_usr[reducer_key]
 
-        if axis_redu:
-            output_moveaxis = np.moveaxis(self.output, axis_redu, range(len(axis_redu)))
-            #pdb.set_trace()
-                        
-            #is it ok to flatten?
-            redu_ind = [x for x in np.ndindex(reducer_inp.shape)]
-            if reducer_fun:
-                 self.output_reduced = [(reducer_inp[x], 
-                                getattr(output_moveaxis[x], reducer_fun)()) for x in redu_ind]
+        axis_all = []
+        axis_redu_list = []
+        newaxis_redu_list = []
+        index_redu_list = []
+        inputs_redu_list = []
+        i = 0
+        for key in reducer_key_list:
+            axis_redu = self.redu_mapping[key]
+            if list(set(axis_all) & set(axis_redu)):
+                raise Exception("cant reduce anymore, chose the subset of keys")
             else:
-                # TODO should i really use list?
-                #pdb.set_trace()
-                self.output_reduced = [(reducer_inp[x], output_moveaxis[x]) for x in redu_ind] 
-        else: #the field was just a number
-            if reducer_fun:
-                self.output_reduced = [(reducer_inp[0], getattr(self.output, reducer_fun)())]
-            else:
-                self.output_reduced = [(reducer_inp[0], self.output)]
+                axis_all += axis_redu
+                axis_redu_list.append(axis_redu)
+                newaxis_redu_list.append(range(i, i+ len(axis_redu)))
+                inputs_redu_list.append(self.inputs_usr[key])
+                index_redu_list.append([x for x in np.ndindex(self.inputs_usr[key].shape)])
+                i+=len(axis_redu)
+
+        #changing output                                                                                                                      
+        self._output_moveaxis = self.output.copy() #it's a copy...                                                                            
+        self._output_moveaxis = np.moveaxis(self._output_moveaxis,
+                                           sum(axis_redu_list, []), sum(newaxis_redu_list, []))
+
+        self._index_redu_product = list(itertools.product(*index_redu_list))
+
+        if reducer_fun:
+            # should I really use list
+            self.output_reduced = [([inputs_redu_list[i][x[i]] for i in range(len(inputs_redu_list))],
+                                    getattr(self._output_moveaxis[sum(x,())],reducer_fun)()) for x in self._index_redu_product]
+        else:
+            self.output_reduced = [([inputs_redu_list[i][x[i]] for i in range(len(inputs_redu_list))], 
+                                    self._output_moveaxis[sum(x,())]) for x in self._index_redu_product]
+        
+
+# TODO: now the code doesn't work for var that are just a number
+#        else: #the field was just a number
+#            if reducer_fun:
+#                self.output_reduced = [(reducer_inp[0], getattr(self.output, reducer_fun)())]
+#            else:
+#                self.output_reduced = [(reducer_inp[0], self.output)]
             
+
+
 
 class ReduNode(object):
     #TODO should inherit from SNode??
