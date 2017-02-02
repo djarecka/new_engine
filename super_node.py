@@ -8,12 +8,9 @@ class SNode(object):
     def __init__(self, function, mapper, inputs={}, arg_map=None, outp_name=None, 
                  run_node=True, redu=False):
         r = re.compile("^[a-zA-Z0-9.\(\)]*$")
-        if r.match(mapper):
-            pass
-            #self.mapper = mapper
-        else: 
+        if not r.match(mapper):
             raise Exception("wrong mapper")
-        # property? TODO
+
         self.inputs_usr = {}
         for key, val in inputs.items():
             self.inputs_usr[key] = np.array(val)
@@ -39,7 +36,6 @@ class SNode(object):
 
         self.inputs = None
         if self.run_node:
-            #pdb.set_trace()
             self.inputs = {}
             for key in inputs:
                 self.inputs[key] = np.array(inputs[key])
@@ -55,7 +51,6 @@ class SNode(object):
 
     def _mapper_to_inputs(self, mapper):
         _mapper_rpn = self._rpn(mapper)
-        #pdb.set_trace()
         if len(_mapper_rpn) > 1:
             self._input_broadcasting(_mapper_rpn)
             
@@ -67,11 +62,9 @@ class SNode(object):
         while i < len(mapper):    
             l = mapper[i]
             inc=1
-            #pdb.set_trace()
             if l in ["(", ".", "x"]:
                 signs.append(l)
             elif l == ")":
-                #pdb.set_trace()
                 if signs[-1] == "(": #for (a).(b)
                     signs.pop()
                 else:
@@ -140,13 +133,10 @@ class SNode(object):
                         for d in range(left_ndim):
                             self.inputs[inp] = self.inputs[inp][np.newaxis, :]
                             
-                        #for reducer
+                        #for reducer, so I know which axis are related to the input var
                         if self.redu:
-                            #pdb.set_trace()
                             self.redu_mapping[inp] = [x+left_ndim for x in self.redu_mapping[inp]]
-                            #pdb.set_trace()
                             if self.outp_name and (inp in self.var_hist):
-                                #pdb.set_trace()
                                 for ih in self.var_hist[inp]:
                                     self.redu_mapping[ih] = [x+left_ndim for x in self.redu_mapping[ih]]
 
@@ -159,8 +149,7 @@ class SNode(object):
 
 
     def __add__(self, second_node):
-        #pdb.set_trace()
-        if isinstance(second_node, SNode): # should I create a different add for ReduNode??
+        if isinstance(second_node, SNode):
             for (key, val) in second_node.inputs_usr.items():
                 if key in self.inputs:
                     raise Exception("a key from second input already exists in self.inputs") #warnings?
@@ -238,8 +227,8 @@ class SNode(object):
                 index_redu_list.append([x for x in np.ndindex(self.inputs_usr[key].shape)])
                 i+=len(axis_redu)
 
-        #changing output                                                                                                                      
-        self._output_moveaxis = self.output.copy() #it's a copy...                                                                            
+        #changing output               
+        self._output_moveaxis = self.output.copy() #it's a copy...   
         self._output_moveaxis = np.moveaxis(self._output_moveaxis,
                                            sum(axis_redu_list, []), sum(newaxis_redu_list, []))
 
@@ -255,13 +244,6 @@ class SNode(object):
         
 
 # TODO: now the code doesn't work for var that are just a number
-#        else: #the field was just a number
-#            if reducer_fun:
-#                self.output_reduced = [(reducer_inp[0], getattr(self.output, reducer_fun)())]
-#            else:
-#                self.output_reduced = [(reducer_inp[0], self.output)]
-            
-
 
 
 class ReduNode(object):
@@ -270,8 +252,7 @@ class ReduNode(object):
         self.reducer = reducer
         self.reducer_function = reducer_function 
 
-# sprawdzanie argumentow f-cji i dopasowywanie (na poczatku jako kwrgs)
-# tworzenie tablic a/b w zaleznosci od ./x i podawanie tego do f-cji
+
 # zrezygnowac z warunku, ze a i b trza w init podawac?
 # nazwy nie moga miec "x", czy to ok?
 # napisac jakis dekorator aby do arg f-cji dodawal  **dict (albo tworzyc jakis kolejny sub-slownik) 

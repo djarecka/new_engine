@@ -197,11 +197,7 @@ def test_reducer_6(reducer_var, expected_redu):
 
 
 #pomyslec czy drugo node musi miec redu=true
-
 #zakldamy chyba, ze postac f-cji wychodzacej z f-cji mapper jest taka sama??
-# trzeba pamietac zmienne ktore ida do reduce
-# skoro i tak trzeba ciagac poczatkowe zmienne, to moze osobne jednak nody dla reduce??
-
 
 #jesli jest named output, to trzeba sprawdzac, czy z rzeczy mappera nie ma w reduce i ewntualnie tez jakos korelowac (nowy slownik?)
 #chwilowo zrobic, ze reduzer tylko na koncu?
