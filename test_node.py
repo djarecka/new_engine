@@ -20,6 +20,9 @@ def my_function_3(a, b, c, **dict):
 def my_function_4(a, b, c, d, **dict):
     return a * b - c * d
 
+def my_function_3dot(a, b, c, **dict):
+    return a * b * c
+
 
 # TODO: test np.outer(self.inputs_usr["a"], self.inputs_usr["b"]) = \
 # self.inputs["a"] * self.inputs["b"]
@@ -174,7 +177,15 @@ def test_single_node_8(inputs_dic, expected_output):
 def test_single_node_9(inputs_dic, expected_output):
     sn = SNode(function=my_function_4, mapper='(a.b)x(c.d)', inputs=inputs_dic)
     sn.run()
-    pdb.set_trace()
+    assert (sn.output == expected_output).all()
+
+
+@pytest.mark.parametrize("inputs_dic, expected_output", [
+        ({"a":[3, 1], "b":[1, 2], "c": [1,0]}, np.array([[[3, 0], [6, 0]], [[1, 0], [2, 0]]])),
+        ])
+def test_single_node_10(inputs_dic, expected_output):
+    sn = SNode(function=my_function_3dot, mapper='(axb)xc', inputs=inputs_dic)
+    sn.run()
     assert (sn.output == expected_output).all()
 
 

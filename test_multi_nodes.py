@@ -11,7 +11,6 @@ def my_function_dot_temp(c, d, **dict):
     return c*d
 
 def my_function_4a(ab, c, d, **dict):
-    pdb.set_trace()
     return ab - c * d
 
 
@@ -40,7 +39,6 @@ def test_2nodes_1a():
     sn1.run()
     expected_output = np.array([[1, 3], [0, 2]])
     expected_inp_ab = np.array([-6, -7])
-    pdb.set_trace()
     assert (sn1.output == expected_output).all()
     assert (sn1.inputs["out"] == expected_output).all()
     assert (sn1.inputs["ab"] == expected_inp_ab).all()

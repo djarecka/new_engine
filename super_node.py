@@ -1,10 +1,12 @@
 import re
 import numpy as np
+import itertools
 import pdb
 
 
 class SNode(object):
-    def __init__(self, function, mapper, inputs={}, arg_map=None, outp_name=None, run_node=True):
+    def __init__(self, function, mapper, inputs={}, arg_map=None, outp_name=None, 
+                 run_node=True, redu=False):
         r = re.compile("^[a-zA-Z0-9.\(\)]*$")
         if r.match(mapper):
             pass
@@ -12,11 +14,29 @@ class SNode(object):
         else: 
             raise Exception("wrong mapper")
         # property? TODO
-        self.inputs_usr = inputs
+        self.inputs_usr = {}
+        for key, val in inputs.items():
+            self.inputs_usr[key] = np.array(val)
         
         self.outp_name = outp_name
         self.run_node = run_node
+        self.redu = redu
         
+        if self.redu: # TODO: this should be true only if run_node is True
+            self.redu_mapping = {}
+            for key, arr in self.inputs_usr.items():
+                if arr.size == 1:
+                    self.redu_mapping[key] = [] #if array has only one element
+                else:
+                    self.redu_mapping[key] = [i for i in range(arr.ndim)]
+
+        if self.outp_name and self.redu:
+            self.var_hist = {}
+            if type(self.outp_name) is list:
+              for var in self.outp_name:  #I'm assuming that all var from inputs is used in mapper TODO
+                  self.var_hist[var] = inputs.keys()
+        
+
         self.inputs = None
         if self.run_node:
             #pdb.set_trace()
@@ -119,6 +139,17 @@ class SNode(object):
                     for inp in right:
                         for d in range(left_ndim):
                             self.inputs[inp] = self.inputs[inp][np.newaxis, :]
+                            
+                        #for reducer
+                        if self.redu:
+                            #pdb.set_trace()
+                            self.redu_mapping[inp] = [x+left_ndim for x in self.redu_mapping[inp]]
+                            #pdb.set_trace()
+                            if self.outp_name and (inp in self.var_hist):
+                                #pdb.set_trace()
+                                for ih in self.var_hist[inp]:
+                                    self.redu_mapping[ih] = [x+left_ndim for x in self.redu_mapping[ih]]
+
                         self.inputs[inp] = np.broadcast_to(self.inputs[inp], out_shape)
 
                 inp_arr.append(left+right)
@@ -128,14 +159,29 @@ class SNode(object):
 
 
     def __add__(self, second_node):
-        for (key, val) in second_node.inputs_usr.items():
-            if key in self.inputs:
-                raise Exception("a key from second input already exists in self.inputs") #warnings?
-            else:
-                self.inputs[key] = np.array(val)
-        
-        self.functions += second_node.functions
-
+        #pdb.set_trace()
+        if isinstance(second_node, SNode): # should I create a different add for ReduNode??
+            for (key, val) in second_node.inputs_usr.items():
+                if key in self.inputs:
+                    raise Exception("a key from second input already exists in self.inputs") #warnings?
+                else:
+                    self.inputs[key] = val
+                    self.inputs_usr[key] = val
+                    if second_node.redu:
+                        self.redu_mapping[key] = second_node.redu_mapping[key]
+                    
+            if second_node.redu and second_node.outp_name:
+                for (key, val) in second_node.var_hist.items():
+                    if key in self.var_hist:
+                        raise Exception("a key from second redu_mapper already exists in self.inputs") #warnings?
+                    else:
+                        self.var_hist[key] = val
+       
+            self.functions += second_node.functions
+            
+        elif isinstance(second_node, ReduNode): # checking self.redu ?? TODO
+            # TODO we should probably allow for multiple reducers
+            self.reducer_and_fun = (second_node.reducer, second_node.reducer_function) 
 
     def run(self):
         if self.run_node:
@@ -163,7 +209,66 @@ class SNode(object):
             # TODO check if the node has all fields and try to run?
             raise Exception("The node is not design to be run")
 
+        # for now it works only at the end, so no self.function needed, but TODO 
+        if self.redu and self.reducer_and_fun:
+            self.run_reducer()
 
+
+    def run_reducer(self):
+        # assuming that we reduce self.output, i.e. the result of the last function
+        # assuming that there is one reducer node TODO
+        reducer_key_list = self.reducer_and_fun[0]
+        reducer_fun = self.reducer_and_fun[1]
+
+        axis_all = []
+        axis_redu_list = []
+        newaxis_redu_list = []
+        index_redu_list = []
+        inputs_redu_list = []
+        i = 0
+        for key in reducer_key_list:
+            axis_redu = self.redu_mapping[key]
+            if list(set(axis_all) & set(axis_redu)):
+                raise Exception("cant reduce anymore, chose the subset of keys")
+            else:
+                axis_all += axis_redu
+                axis_redu_list.append(axis_redu)
+                newaxis_redu_list.append(range(i, i+ len(axis_redu)))
+                inputs_redu_list.append(self.inputs_usr[key])
+                index_redu_list.append([x for x in np.ndindex(self.inputs_usr[key].shape)])
+                i+=len(axis_redu)
+
+        #changing output                                                                                                                      
+        self._output_moveaxis = self.output.copy() #it's a copy...                                                                            
+        self._output_moveaxis = np.moveaxis(self._output_moveaxis,
+                                           sum(axis_redu_list, []), sum(newaxis_redu_list, []))
+
+        self._index_redu_product = list(itertools.product(*index_redu_list))
+
+        if reducer_fun:
+            # should I really use list
+            self.output_reduced = [([inputs_redu_list[i][x[i]] for i in range(len(inputs_redu_list))],
+                                    getattr(self._output_moveaxis[sum(x,())],reducer_fun)()) for x in self._index_redu_product]
+        else:
+            self.output_reduced = [([inputs_redu_list[i][x[i]] for i in range(len(inputs_redu_list))], 
+                                    self._output_moveaxis[sum(x,())]) for x in self._index_redu_product]
+        
+
+# TODO: now the code doesn't work for var that are just a number
+#        else: #the field was just a number
+#            if reducer_fun:
+#                self.output_reduced = [(reducer_inp[0], getattr(self.output, reducer_fun)())]
+#            else:
+#                self.output_reduced = [(reducer_inp[0], self.output)]
+            
+
+
+
+class ReduNode(object):
+    #TODO should inherit from SNode??
+    def __init__(self, reducer, reducer_function=None):
+        self.reducer = reducer
+        self.reducer_function = reducer_function 
 
 # sprawdzanie argumentow f-cji i dopasowywanie (na poczatku jako kwrgs)
 # tworzenie tablic a/b w zaleznosci od ./x i podawanie tego do f-cji
