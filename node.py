@@ -45,6 +45,9 @@ class Node:
 
         # TODO, trzeba pomyslec i IF(arg) i IF(out_nm)
         self.output = self.Interface(**self._inputs_bcast)
+        if type(self.output) is not type:
+            self.output = tuple([self.output])
+
 
         if self.reducer:
             self._run_reducer()
@@ -69,15 +72,17 @@ class Node:
                 index_redu_list.append([x for x in np.ndindex(self._inputs[key].shape)])
                 i+=len(axis_redu)
 
-        #changing output                                                                            
-        self._output_moveaxis = self.output.copy() # TODO:it's a copy...
+        #changing output
+        self.output_reduced = []   
+        for out in self.output:
+            output_moveaxis = out.copy() # TODO:it's a copy...
         
-        self._output_moveaxis = np.moveaxis(self._output_moveaxis,
-                                           sum(axis_redu_list, []), sum(newaxis_redu_list, []))
+            output_moveaxis = np.moveaxis(output_moveaxis,
+                                          sum(axis_redu_list, []), sum(newaxis_redu_list, []))
 
-        self._index_redu_product = list(itertools.product(*index_redu_list))
-        self.output_reduced = [([inputs_redu_list[i][x[i]] for i in range(len(inputs_redu_list))],
-                                self._output_moveaxis[sum(x,())]) for x in self._index_redu_product]
+            index_redu_product = list(itertools.product(*index_redu_list))
+            self.output_reduced.append([([inputs_redu_list[i][x[i]] for i in range(len(inputs_redu_list))],
+                                         output_moveaxis[sum(x,())]) for x in index_redu_product])
 
 
 

@@ -11,8 +11,8 @@ def test_reducer_1():
     sn = Node(Interface=my_function_1, mapper='a', reducer=["a"]) 
     sn.inputs = {"a" : [3, 1, 8]}
     sn.run()
-    assert (sn.output == [0, -8, 55]).all()
-    assert sn.output_reduced == [([3], [0]), ([1], [-8]), ([8], [55])]
+    assert (sn.output[0] == [0, -8, 55]).all()
+    assert sn.output_reduced[0] == [([3], [0]), ([1], [-8]), ([8], [55])]
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
@@ -24,9 +24,9 @@ def test_reducer_2(inputs_dic, expected_output):
     sn.inputs=inputs_dic
     sn.run()
     #pdb.set_trace()
-    assert (sn.output == expected_output[0]).all()
+    assert (sn.output[0] == expected_output[0]).all()
     #assert (sn.inputs["ff"] == expected_output[0]).all()
-    for (i,out) in enumerate(sn.output_reduced):
+    for (i,out) in enumerate(sn.output_reduced[0]):
         assert out[0] == expected_output[1][i][0]
         assert (out[1] == expected_output[1][i][1]).all()
 
@@ -44,8 +44,8 @@ def test_reducer_3(inputs_dic, expected_output, expected_redu):
     sn.inputs = inputs_dic
     sn.run()
     #pdb.set_trace()
-    assert (sn.output == expected_output).all()
-    for (i,out) in enumerate(sn.output_reduced):
+    assert (sn.output[0] == expected_output).all()
+    for (i,out) in enumerate(sn.output_reduced[0]):
         assert out[0] == expected_redu[i][0]
         assert (out[1] == expected_redu[i][1]).all()
 
@@ -58,8 +58,8 @@ def test_reducer_3a(inputs_dic, expected_output, expected_redu):
     sn = Node(Interface=my_function_2, mapper='axb', reducer=["b"]) 
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output == expected_output).all()
-    for (i,out) in enumerate(sn.output_reduced):
+    assert (sn.output[0] == expected_output).all()
+    for (i,out) in enumerate(sn.output_reduced[0]):
         assert out[0] == expected_redu[i][0]
         assert (out[1] == expected_redu[i][1]).all()
 
@@ -73,8 +73,8 @@ def test_reducer_3b(inputs_dic, expected_output, expected_redu):
     sn = Node(Interface=my_function_2, mapper='axb', reducer=["b", "a"])
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output == expected_output).all()
-    for (i,out) in enumerate(sn.output_reduced):
+    assert (sn.output[0] == expected_output).all()
+    for (i,out) in enumerate(sn.output_reduced[0]):
         assert out[0] == expected_redu[i][0]
         assert (out[1] == expected_redu[i][1]).all()
 
@@ -87,8 +87,8 @@ def test_reducer_3c(inputs_dic, expected_output, expected_redu):
     sn = Node(Interface=my_function_2, mapper='axb', reducer=["a", "b"])
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output == expected_output).all()
-    for (i,out) in enumerate(sn.output_reduced):
+    assert (sn.output[0] == expected_output).all()
+    for (i,out) in enumerate(sn.output_reduced[0]):
         assert out[0] == expected_redu[i][0]
         assert (out[1] == expected_redu[i][1]).all()
 
@@ -112,10 +112,10 @@ def atest_reducer_4(reducer_var, expected_redu):
     sn1.run()
     expected_output = np.array([[1, 3], [0, 2]])
     expected_inp_ab = np.array([-6, -7])
-    assert (sn1.output == expected_output).all()
+    assert (sn1.output[0] == expected_output).all()
     assert (sn1.inputs["out"] == expected_output).all()
     assert (sn1.inputs["ab"] == expected_inp_ab).all()
-    for (i,out) in enumerate(sn1.output_reduced):
+    for (i,out) in enumerate(sn1.output_reduced[0]):
         assert out[0] == expected_redu[i][0]
         assert (out[1] == expected_redu[i][1]).all()
 
@@ -138,10 +138,10 @@ def atest_reducer_4a(reducer_var, reducer_fun, expected_redu):
     sn1.run()
     expected_output = np.array([[1, 3], [0, 2]])
     expected_inp_ab = np.array([-6, -7])
-    assert (sn1.output == expected_output).all()
+    assert (sn1.output[0] == expected_output).all()
     assert (sn1.inputs["out"] == expected_output).all()
     assert (sn1.inputs["ab"] == expected_inp_ab).all()
-    for (i,out) in enumerate(sn1.output_reduced):
+    for (i,out) in enumerate(sn1.output_reduced[0]):
         assert out == expected_redu[i]
 
 
@@ -163,9 +163,9 @@ def atest_reducer_5(reducer_var, expected_redu):
     sn1.run()
     expected_output = np.array([[1, 3], [0, 2]])
     expected_inp_ab = np.array([[3, 3], [2, 2]])
-    assert (sn1.output == expected_output).all()
+    assert (sn1.output[0] == expected_output).all()
     assert (sn1.inputs["ab"] == expected_inp_ab).all()
-    for (i,out) in enumerate(sn1.output_reduced):
+    for (i,out) in enumerate(sn1.output_reduced[0]):
         assert out[0] == expected_redu[i][0]
         assert (out[1] == expected_redu[i][1]).all()
 
@@ -182,8 +182,8 @@ def test_reducer_6(reducer_var, expected_redu):
     sn.run()
     expected_output = [[[3, 0], [6, 0]], [[1, 0], [2, 0]]]
     #pdb.set_trace()
-    assert (sn.output == expected_output).all()
-    for (i,out) in enumerate(sn.output_reduced):
+    assert (sn.output[0] == expected_output).all()
+    for (i,out) in enumerate(sn.output_reduced[0]):
         assert out[0] == expected_redu[i][0]
         assert (out[1] == expected_redu[i][1]).all()
 
