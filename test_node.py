@@ -29,20 +29,27 @@ def test_single_node_1():
     sn = Node(Interface=my_function_1, mapper='a')
     sn.inputs = {"a" : [3, 1, 8]}
     sn.run()
-    assert (sn.output[0] == [0, -8, 55]).all()
+    assert (sn.output["out"] == [0, -8, 55]).all()
 
 
 def test_single_node_1a():
     sn = Node(Interface=my_function_1, mapper='(a)')
     sn.inputs = {"a" : [3, 1, 8]}
     sn.run()
-    assert (sn.output[0] == [0, -8, 55]).all()
+    assert (sn.output["out"] == [0, -8, 55]).all()
 
 def test_single_node_1b():
     sn = Node(Interface=my_function_1a, mapper='a1a')
     sn.inputs = {"a1a" : [3, 1, 8]}
     sn.run()
-    assert (sn.output[0] == [0, -8, 55]).all()
+    assert (sn.output["out"] == [0, -8, 55]).all()
+
+
+def test_single_node_1c():
+    sn = Node(Interface=my_function_1, mapper='a', output_name=["out_1"])
+    sn.inputs = {"a" : [3, 1, 8]}
+    sn.run()
+    assert (sn.output["out_1"] == [0, -8, 55]).all()
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
@@ -53,7 +60,20 @@ def test_single_node_2(inputs_dic, expected_output):
     sn = Node(Interface=my_function_2, mapper='a.b')
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output[0] == expected_output).all()
+    assert (sn.output["out"] == expected_output).all()
+
+
+@pytest.mark.parametrize("inputs_dic, expected_output", [
+        ({"a":[3, 1, 8], "b":[0, 1, 2]}, ([3, 2, 10], [3, 0, 6])),
+        ({"a":[3, 1, 8], "b":[2]}, ([5, 3, 10], [1, -1, 6])),
+        ])
+def test_single_node_2a(inputs_dic, expected_output):
+    outp_name = ["out1", "out2"]
+    sn = Node(Interface=my_function_2a, mapper='a.b', output_name=outp_name)
+    sn.inputs = inputs_dic
+    sn.run()
+    for i, exp in enumerate(expected_output):
+        assert (sn.output[outp_name[i]] == exp).all()
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
@@ -67,7 +87,7 @@ def test_single_node_3(inputs_dic, expected_output):
     sn = Node(Interface=my_function_2, mapper='axb')
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output[0] == expected_output).all()
+    assert (sn.output["out"] == expected_output).all()
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
@@ -78,7 +98,7 @@ def test_single_node_3a(inputs_dic, expected_output):
     sn = Node(Interface=my_function_2, mapper='(a)x(b)')
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output[0] == expected_output).all()
+    assert (sn.output["out"] == expected_output).all()
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
@@ -88,7 +108,7 @@ def test_single_node_4(inputs_dic, expected_output):
     sn = Node(Interface=my_function_3, mapper='(a.b).c')
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output[0] == expected_output).all()
+    assert (sn.output["out"] == expected_output).all()
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
         ({"a":[3, 1], "b":[1, 2], "c":[0, 1]}, [3, 1]),
@@ -97,7 +117,7 @@ def test_single_node_5(inputs_dic, expected_output):
     sn = Node(Interface=my_function_3, mapper='a.(b.c)')
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output[0] == expected_output).all()
+    assert (sn.output["out"] == expected_output).all()
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
@@ -107,7 +127,7 @@ def test_single_node_5a(inputs_dic, expected_output):
     sn = Node(Interface=my_function_3, mapper='(a.(b.c))')
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output[0] == expected_output).all()
+    assert (sn.output["out"] == expected_output).all()
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
@@ -117,7 +137,7 @@ def test_single_node_6(inputs_dic, expected_output):
     sn = Node(Interface=my_function_3, mapper='(axb).c')
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output[0] == expected_output).all()
+    assert (sn.output["out"] == expected_output).all()
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
@@ -127,7 +147,7 @@ def test_single_node_7(inputs_dic, expected_output):
     sn = Node(Interface=my_function_3, mapper='ax(b.c)')
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output[0] == expected_output).all()
+    assert (sn.output["out"] == expected_output).all()
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
@@ -137,7 +157,7 @@ def test_single_node_8(inputs_dic, expected_output):
     sn = Node(Interface=my_function_3, mapper='(b.c)xa')
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output[0] == expected_output).all()
+    assert (sn.output["out"] == expected_output).all()
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
@@ -147,7 +167,7 @@ def test_single_node_9(inputs_dic, expected_output):
     sn = Node(Interface=my_function_4, mapper='(a.b)x(c.d)')
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output[0] == expected_output).all()
+    assert (sn.output["out"] == expected_output).all()
 
 
 @pytest.mark.parametrize("inputs_dic, expected_output", [
@@ -157,7 +177,7 @@ def test_single_node_10(inputs_dic, expected_output):
     sn = Node(Interface=my_function_3dot, mapper='(axb)xc')
     sn.inputs = inputs_dic
     sn.run()
-    assert (sn.output[0] == expected_output).all()
+    assert (sn.output["out"] == expected_output).all()
 
 
 @pytest.mark.parametrize("mapper_str", ['a*b', '(a.b', 'axb)', 'a,b'])

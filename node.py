@@ -6,7 +6,7 @@ import pdb
 
 class Node:
     # TODO name should be optional?
-    def __init__(self, Interface, name=None, mapper=None, reducer=None, reduce_function=None):
+    def __init__(self, Interface, output_name=["out"], name=None, mapper=None, reducer=None, reduce_function=None): 
         r = re.compile("^[a-zA-Z0-9.\(\)]*$")
         if not r.match(mapper):
             raise Exception("wrong mapper")
@@ -18,10 +18,19 @@ class Node:
         self.reducer = reducer
         self.Interface = Interface
         self.name = name
+
+        # TODO, not sure what shoul be the way to create output names 
+        self.output_name = output_name
+        self.output = {}
+        for nm in output_name:
+            self.output[nm] = None
         
     # czyli to nie ma byc w init?? wtedy duzo rzeczy w run
     def _get_inputs(self):
-        return self._inputs
+        if "_inputs" in self.__dict__:
+            return self._inputs
+        else:
+            return None
     
     # should I remove dictionary??
     def _set_inputs(self, inp_dict):
@@ -44,9 +53,12 @@ class Node:
 
 
         # TODO, trzeba pomyslec i IF(arg) i IF(out_nm)
-        self.output = self.Interface(**self._inputs_bcast)
-        if type(self.output) is not type:
-            self.output = tuple([self.output])
+        fun_output = self.Interface(**self._inputs_bcast)
+        if type(fun_output) is not tuple:
+            fun_output = tuple([fun_output])
+
+        for (i,nm) in enumerate(self.output_name): 
+            self.output[nm] = fun_output[i]
 
 
         if self.reducer:
@@ -73,16 +85,16 @@ class Node:
                 i+=len(axis_redu)
 
         #changing output
-        self.output_reduced = []   
-        for out in self.output:
+        self.output_reduced = {}   
+        for (key, out) in self.output.items():
             output_moveaxis = out.copy() # TODO:it's a copy...
         
             output_moveaxis = np.moveaxis(output_moveaxis,
                                           sum(axis_redu_list, []), sum(newaxis_redu_list, []))
 
             index_redu_product = list(itertools.product(*index_redu_list))
-            self.output_reduced.append([([inputs_redu_list[i][x[i]] for i in range(len(inputs_redu_list))],
-                                         output_moveaxis[sum(x,())]) for x in index_redu_product])
+            self.output_reduced[key] = [([inputs_redu_list[i][x[i]] for i in range(len(inputs_redu_list))],
+                                         output_moveaxis[sum(x,())]) for x in index_redu_product]
 
 
 
