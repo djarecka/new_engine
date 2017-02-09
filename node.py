@@ -27,9 +27,11 @@ class Node:
     def _set_inputs(self, inp_dict):
         #pdb.set_trace()
         self._inputs = {}
+        self._inputs_bcast = {}
         for key, val in inp_dict.items():
             self._inputs[key] = np.array(val)
-    
+            self._inputs_bcast[key] = np.array(val)
+
     inputs = property(_get_inputs, _set_inputs)
 
 
@@ -42,7 +44,42 @@ class Node:
 
 
         # TODO, trzeba pomyslec i IF(arg) i IF(out_nm)
-        self.output = self.Interface(**self.inputs)
+        self.output = self.Interface(**self._inputs_bcast)
+
+        if self.reducer:
+            self._run_reducer()
+
+
+    def _run_reducer(self):
+        axis_all = []
+        axis_redu_list = []
+        newaxis_redu_list = []
+        index_redu_list = []
+        inputs_redu_list = []
+        i = 0
+        for key in self.reducer:
+            axis_redu = self.redu_mapping[key]
+            if list(set(axis_all) & set(axis_redu)):
+                raise Exception("cant reduce anymore, chose the subset of keys")
+            else:
+                axis_all += axis_redu
+                axis_redu_list.append(axis_redu)
+                newaxis_redu_list.append(list(range(i, i+ len(axis_redu))))
+                inputs_redu_list.append(self._inputs[key])
+                index_redu_list.append([x for x in np.ndindex(self._inputs[key].shape)])
+                i+=len(axis_redu)
+
+        #changing output                                                                            
+        self._output_moveaxis = self.output.copy() # TODO:it's a copy...
+        
+        self._output_moveaxis = np.moveaxis(self._output_moveaxis,
+                                           sum(axis_redu_list, []), sum(newaxis_redu_list, []))
+
+        self._index_redu_product = list(itertools.product(*index_redu_list))
+        self.output_reduced = [([inputs_redu_list[i][x[i]] for i in range(len(inputs_redu_list))],
+                                self._output_moveaxis[sum(x,())]) for x in self._index_redu_product]
+
+
 
 
     def _mapper2rpn(self):
@@ -88,18 +125,18 @@ class Node:
                 if smb == ".": # TODO ten if polaczyc z wyzszym
                     #pdb.set_trace()                                                                
                     # for now I'm assuming that either they have the same shape or shape=(1,)       
-                    if self.inputs[right[0]].shape == self.inputs[left[0]].shape:
+                    if self._inputs_bcast[right[0]].shape == self._inputs_bcast[left[0]].shape:
                         #don't have to do anything, have already the proper shape                   
                         pass
-                    elif self.inputs[right[0]].shape == (1,):
+                    elif self._inputs_bcast[right[0]].shape == (1,):
                         for inp in right:
-                            self.inputs[inp] = \
-                                np.broadcast_to(self.inputs[inp], self.inputs[left[0]].shape)
+                            self._inputs_bcast[inp] = \
+                                np.broadcast_to(self._inputs_bcast[inp], self._inputs_bcast[left[0]].shape)
 
-                    elif self.inputs[left[0]].shape == (1,):
+                    elif self._inputs_bcast[left[0]].shape == (1,):
                         for inp in left:
-                            self.inputs[inp] = \
-                                np.broadcast_to(self.inputs[inp], self.inputs[right[0]].shape)
+                            self._inputs_bcast[inp] = \
+                                np.broadcast_to(self._inputs_bcast[inp], self._inputs_bcast[right[0]].shape)
 
                     else:
                         raise Exception("cannot broadcast")
@@ -107,30 +144,30 @@ class Node:
 
                 elif smb == "x":
                     # should I check if shape doesn't contain ones??                                
-                    left_ndim = self.inputs[left[0]].ndim
-                    right_ndim = self.inputs[right[0]].ndim
-                    out_shape = self.inputs[left[0]].shape + self.inputs[right[0]].shape
+                    left_ndim = self._inputs_bcast[left[0]].ndim
+                    right_ndim = self._inputs_bcast[right[0]].ndim
+                    out_shape = self._inputs_bcast[left[0]].shape + self._inputs_bcast[right[0]].shape
                     for inp in left:
                         #pdb.set_trace()                                                            
                         # how to do it without a loop??                                             
                         for d in range(right_ndim):
-                            self.inputs[inp] = self.inputs[inp][...,np.newaxis]
+                            self._inputs_bcast[inp] = self._inputs_bcast[inp][...,np.newaxis]
                         #pdb.set_trace()                                                            
-                        self.inputs[inp] = np.broadcast_to(self.inputs[inp], out_shape)
+                        self._inputs_bcast[inp] = np.broadcast_to(self._inputs_bcast[inp], out_shape)
 
                     for inp in right:
                         for d in range(left_ndim):
-                            self.inputs[inp] = self.inputs[inp][np.newaxis, :]
+                            self._inputs_bcast[inp] = self._inputs_bcast[inp][np.newaxis, :]
 
                         #for reducer, so I know which axis are related to the input var             
                         if self.reducer:
                             self.redu_mapping[inp] = [x+left_ndim for x in self.redu_mapping[inp]]
-                            if self.outp_name and (inp in self.var_hist):
-                                for ih in self.var_hist[inp]:
-                                    self.redu_mapping[ih] = [x+left_ndim for x in self.redu_mapping\
-[ih]]
+                            # to chyba mi sie nie przyda ??
+                            #if self.outp_name and (inp in self.var_hist):
+                            #    for ih in self.var_hist[inp]:
+                            #        self.redu_mapping[ih] = [x+left_ndim for x in self.redu_mapping[ih]]
 
-                        self.inputs[inp] = np.broadcast_to(self.inputs[inp], out_shape)
+                        self._inputs_bcast[inp] = np.broadcast_to(self._inputs_bcast[inp], out_shape)
 
                 inp_arr.append(left+right)
 
@@ -140,7 +177,7 @@ class Node:
 
     def _setting_redu_mapping(self):
         self.redu_mapping = {}
-        for key, arr in self.inputs.items():
+        for key, arr in self._inputs.items():
             if arr.size == 1:
                 self.redu_mapping[key] = [] #if array has only one element                      
             else:
