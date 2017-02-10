@@ -25,12 +25,13 @@ class Node:
         for nm in output_name:
             self.output[nm] = None
         
+        self._inputs = {}
+
     # czyli to nie ma byc w init?? wtedy duzo rzeczy w run
     def _get_inputs(self):
-        if "_inputs" in self.__dict__:
-            return self._inputs
-        else:
-            return None
+        #if "_inputs" in self.__dict__:
+        return self._inputs
+        
     
     # should I remove dictionary??
     def _set_inputs(self, inp_dict):
@@ -45,7 +46,6 @@ class Node:
 
 
     def run(self):
-        # chyba musze jednak stworzyc nowy zestaw inputu, czy nie?? moze sprobuje bez
         # have to start from broadcasting
         if self.reducer:
             self._setting_redu_mapping()
@@ -53,6 +53,7 @@ class Node:
 
 
         # TODO, trzeba pomyslec i IF(arg) i IF(out_nm)
+        #pdb.set_trace()
         fun_output = self.Interface(**self._inputs_bcast)
         if type(fun_output) is not tuple:
             fun_output = tuple([fun_output])
