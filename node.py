@@ -27,6 +27,9 @@ class Node:
         
         self._inputs = {}
 
+        self.redu_mapping = {}
+        self.var_hist = {}
+        
     # czyli to nie ma byc w init?? wtedy duzo rzeczy w run
     def _get_inputs(self):
         #if "_inputs" in self.__dict__:
@@ -47,8 +50,8 @@ class Node:
 
     def run(self):
         # have to start from broadcasting
-        if self.reducer:
-            self._setting_redu_mapping()
+        #if self.reducer:
+        self._setting_redu_mapping()
         self._input_broadcasting()
 
 
@@ -157,7 +160,7 @@ class Node:
                                 np.broadcast_to(self._inputs_bcast[inp], self._inputs_bcast[right[0]].shape)
 
                     else:
-                        raise Exception("cannot broadcast")
+                         raise Exception("cannot broadcast")
 
 
                 elif smb == "x":
@@ -178,12 +181,12 @@ class Node:
                             self._inputs_bcast[inp] = self._inputs_bcast[inp][np.newaxis, :]
 
                         #for reducer, so I know which axis are related to the input var             
-                        if self.reducer:
-                            self.redu_mapping[inp] = [x+left_ndim for x in self.redu_mapping[inp]]
+                        #if self.reducer:
+                        self.redu_mapping[inp] = [x+left_ndim for x in self.redu_mapping[inp]]
                             # to chyba mi sie nie przyda ??
-                            #if self.outp_name and (inp in self.var_hist):
-                            #    for ih in self.var_hist[inp]:
-                            #        self.redu_mapping[ih] = [x+left_ndim for x in self.redu_mapping[ih]]
+                        if inp in self.var_hist:
+                            for ih in self.var_hist[inp]:
+                                self.redu_mapping[ih] = [x+left_ndim for x in self.redu_mapping[ih]]
 
                         self._inputs_bcast[inp] = np.broadcast_to(self._inputs_bcast[inp], out_shape)
 
@@ -194,9 +197,9 @@ class Node:
 
 
     def _setting_redu_mapping(self):
-        self.redu_mapping = {}
         for key, arr in self._inputs.items():
-            if arr.size == 1:
-                self.redu_mapping[key] = [] #if array has only one element                      
-            else:
-                self.redu_mapping[key] = [i for i in range(arr.ndim)]
+            if key not in  self.redu_mapping.keys():
+                if arr.size == 1:
+                    self.redu_mapping[key] = [] #if array has only one element                      
+                else:
+                    self.redu_mapping[key] = [i for i in range(arr.ndim)]

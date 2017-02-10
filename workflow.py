@@ -13,10 +13,14 @@ class Workflow():
             self.nodes_list = nodes_list
         else:
             self.nodes_list = []
+        # TODO when nodes_list is not none
+        self.nodes_dict = {}
         self.name = name
         self.inputs_map = inputs_map
         self.output_map = output_map
+        self.output_map_reduced = {} 
         self.connect_inp = {}
+        self.connect_inp_redu = {}
 
     def add_node(self, new_node):
         self.nodes_list.append(new_node)
@@ -24,6 +28,7 @@ class Workflow():
             self.inputs_map.update(new_node.inputs)
         if not new_node.name:
             new_node.name = "node"+str(len(self.nodes_list))
+        self.nodes_dict[new_node.name] = new_node
 
 
     def connect(self, from_node, from_socket, to_node, to_socket):
@@ -32,23 +37,59 @@ class Workflow():
             self.add_node(from_node)
        if to_node not in self.nodes_list:
             self.add_node(to_node)
-        
+
+       # TODO should think how to do multiple connection (can have the same input in mapper?)
        if not to_node.name in self.connect_inp.keys():
-           self.connect_inp[to_node.name] = []
-       inp = View(from_node.output)
-       inp.rename(from_socket,to_socket)
-       self.connect_inp[to_node.name].append(inp)
-       #to_node.inputs.rename(from_node, to_node)
+           self.connect_inp[to_node.name] = (from_node, from_socket, to_socket)
+       #    self.connect_inp[to_node.name] = []
+       ##inp = View(from_node.output)
+       #inp.rename(from_socket,to_socket)
+       #self.connect_inp[to_node.name].append(inp)
+
+       #if to_node.reducer:
+       #    if not to_node.name in self.connect_inp_redu.keys():
+       #        self.connect_inp_redu[to_node.name] = []
+       #    self.connect_inp_redu[to_node.name].append(from_node._inputs)
 
 
     # TODO think about order/graph
     def run(self):
         for nn in self.nodes_list:
             if nn.name in self.connect_inp.keys():
-                self._update_inputs(nn)
-            pdb.set_trace()
+                self._update_connection(nn)
+            #pdb.set_trace()
             nn.run()
+            #pdb.set_trace()
             self.output_map[nn.name] = nn.output
+            
+            if nn.reducer:
+                self.output_map_reduced[nn.name] = nn.output_reduced
+        # TODO czy output map ma byc reduced?
+
+
+    def _update_connection(self, node):
+        (from_node, from_socket, to_socket) = self.connect_inp[node.name]
+        inp = node.inputs # TODO how to update node.iputs?
+        if type(to_socket) is list:
+            for (i,sc) in enumerate(to_socket):
+                inp[sc] = from_node.output[from_socket[i]]
+                node.var_hist[sc] = []
+        else:
+            inp[to_socket] = from_node.output[from_socket]
+            node.var_hist[to_socket] = []
+
+#        if node.reducer:
+        for (key, val) in from_node.inputs.items():
+            if key in self.inputs_map.keys():
+                inp[key] = val
+                node.redu_mapping[key] = from_node.redu_mapping[key]
+                if type(to_socket) is list:
+                    for sc in to_socket:
+                        node.var_hist[sc].append(key)
+                else:
+                    node.var_hist[to_socket].append(key)
+        node.inputs = inp
+
             
 
     def _update_inputs(self, node):

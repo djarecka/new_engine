@@ -11,6 +11,7 @@ def test_reducer_1():
     sn = Node(Interface=my_function_1, mapper='a', reducer=["a"]) 
     sn.inputs = {"a" : [3, 1, 8]}
     sn.run()
+    pdb.set_trace()
     assert (sn.output["out"] == [0, -8, 55]).all()
     assert sn.output_reduced["out"] == [([3], [0]), ([1], [-8]), ([8], [55])]
 
