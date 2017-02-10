@@ -30,7 +30,7 @@ class Node:
         self.redu_mapping = {}
         self.var_hist = {}
         
-    # czyli to nie ma byc w init?? wtedy duzo rzeczy w run
+    # this is not in init?? 
     def _get_inputs(self):
         #if "_inputs" in self.__dict__:
         return self._inputs
@@ -183,7 +183,6 @@ class Node:
                         #for reducer, so I know which axis are related to the input var             
                         #if self.reducer:
                         self.redu_mapping[inp] = [x+left_ndim for x in self.redu_mapping[inp]]
-                            # to chyba mi sie nie przyda ??
                         if inp in self.var_hist:
                             for ih in self.var_hist[inp]:
                                 self.redu_mapping[ih] = [x+left_ndim for x in self.redu_mapping[ih]]

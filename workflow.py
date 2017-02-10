@@ -64,7 +64,7 @@ class Workflow():
             
             if nn.reducer:
                 self.output_map_reduced[nn.name] = nn.output_reduced
-        # TODO czy output map ma byc reduced?
+        # TODO  output be already reduced?
 
 
     def _update_connection(self, node):
